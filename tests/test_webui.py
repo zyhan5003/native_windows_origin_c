@@ -16,6 +16,14 @@ def test_webui_reuses_single_token_clear_helper() -> None:
     assert INDEX_HTML.count("localStorage.removeItem('screen_windows_token')") == 1
 
 
+def test_webui_does_not_reuse_token_without_web_crypto_hmac() -> None:
+    assert "function canSignAuthToken()" in INDEX_HTML
+    assert "window.crypto.subtle.importKey" in INDEX_HTML
+    assert "canReuseToken() && authToken && canSignAuthToken()" in INDEX_HTML
+    assert "当前手机浏览器或 HTTP 环境不支持令牌复用" in INDEX_HTML
+    assert "throw new Error('当前浏览器或 HTTP 环境不支持令牌签名" in INDEX_HTML
+
+
 def test_webui_renders_video_performance_stats() -> None:
     assert 'id="mediaStats"' in INDEX_HTML
     assert "function renderMediaStats(runtime)" in INDEX_HTML

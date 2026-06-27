@@ -1325,6 +1325,9 @@
       }
 
       async function computeSignature(token, timestamp) {
+        if (!canSignAuthToken()) {
+          throw new Error('当前浏览器或 HTTP 环境不支持令牌签名，请输入 PIN 重新连接');
+        }
         const key = await crypto.subtle.importKey(
           'raw',
           new TextEncoder().encode(token),
@@ -1350,11 +1353,20 @@
         return authMode() !== 'always' && authMode() !== 'none';
       }
 
+      function canSignAuthToken() {
+        return Boolean(
+          window.crypto
+          && window.crypto.subtle
+          && window.crypto.subtle.importKey
+          && window.crypto.subtle.sign
+        );
+      }
+
       function canAutoReconnect() {
         if (autoReconnectPaused) {
           return false;
         }
-        return authMode() === 'none' || (canReuseToken() && Boolean(authToken));
+        return authMode() === 'none' || (canReuseToken() && Boolean(authToken) && canSignAuthToken());
       }
 
       function storeAuthToken(token) {
@@ -1613,7 +1625,18 @@
         if (normalizedPin() || authMode() === 'none') {
           autoReconnectPaused = false;
         }
-        if (canReuseToken() && authToken) {
+        if (canReuseToken() && authToken && !canSignAuthToken()) {
+          clearStoredAuthToken();
+          if (!normalizedPin()) {
+            autoReconnectPaused = true;
+            updateConnectButton(false);
+            updateSessionStatus('当前手机浏览器或 HTTP 环境不支持令牌复用，请输入 PIN 重新连接');
+            socket.close();
+            rejectPendingSignalReady(new Error('token signing unavailable'));
+            return signalReadyPromise;
+          }
+        }
+        if (canReuseToken() && authToken && canSignAuthToken()) {
           const signature = await computeSignature(authToken, timestamp);
           socket.send(JSON.stringify({
             type: 'auth',
