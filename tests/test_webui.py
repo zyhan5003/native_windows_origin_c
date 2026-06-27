@@ -71,3 +71,14 @@ def test_webui_exposes_manual_resolution_fps_and_bitrate_controls() -> None:
     assert "payload.fps = Number(qualityFps.value);" in INDEX_HTML
     assert "payload.bitrate_mbps = Number(qualityBitrate.value);" in INDEX_HTML
     assert "function qualityProfileKey(profile)" in INDEX_HTML
+
+
+def test_webui_has_preview_lifecycle_and_view_controls() -> None:
+    assert 'id="rebuildPreviewBtn"' in INDEX_HTML
+    assert 'id="fitModeBtn"' in INDEX_HTML
+    assert 'id="fullscreenBtn"' in INDEX_HTML
+    assert "async function stopPreview" in INDEX_HTML
+    assert "type: 'webrtc_close'" in INDEX_HTML
+    assert "streamBtn.textContent = active ? '停止视频预览' : '启动视频预览';" in INDEX_HTML
+    assert "controlSurface.requestFullscreen()" in INDEX_HTML
+    assert "controlSurface.classList.toggle('fit-cover'" in INDEX_HTML

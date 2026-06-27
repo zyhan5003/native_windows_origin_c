@@ -307,6 +307,9 @@ INDEX_HTML = """<!doctype html>
       .video-stage.control-armed {
         box-shadow: 0 0 0 2px rgba(136, 240, 109, 0.95), 0 0 0 10px rgba(136, 240, 109, 0.08);
       }
+      .video-stage.fit-cover video {
+        object-fit: cover;
+      }
       video {
         width: 100%;
         height: 100%;
@@ -484,7 +487,12 @@ INDEX_HTML = """<!doctype html>
               <strong>Live Desktop</strong>
               <span>点击画面后启用远控；失焦会自动释放按键。</span>
             </div>
-            <div id="stageStatus" class="status-pill">idle</div>
+            <div class="actions">
+              <button id="rebuildPreviewBtn" class="secondary" disabled>重建预览</button>
+              <button id="fitModeBtn" class="secondary">填充画面</button>
+              <button id="fullscreenBtn" class="secondary">全屏</button>
+              <div id="stageStatus" class="status-pill">idle</div>
+            </div>
           </div>
           <div id="controlSurface" class="video-stage" tabindex="0">
             <video id="remoteVideo" autoplay playsinline muted></video>
@@ -604,6 +612,8 @@ INDEX_HTML = """<!doctype html>
       let authToken = localStorage.getItem('screen_windows_token') || '';
       let peerConnection = null;
       let previewDesired = false;
+      let previewActive = false;
+      let fitMode = 'contain';
       let reconnectingSignal = false;
       let reconnectTimer = null;
       let reconnectAttempts = 0;
@@ -658,6 +668,9 @@ INDEX_HTML = """<!doctype html>
       const connectBtn = document.getElementById('connectBtn');
       const streamBtn = document.getElementById('streamBtn');
       const controlBtn = document.getElementById('controlBtn');
+      const rebuildPreviewBtn = document.getElementById('rebuildPreviewBtn');
+      const fitModeBtn = document.getElementById('fitModeBtn');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
       const resetBtn = document.getElementById('resetBtn');
       const pinInput = document.getElementById('pin');
       const clipboardText = document.getElementById('clipboardText');
@@ -711,6 +724,19 @@ INDEX_HTML = """<!doctype html>
         controlStatusEl.innerHTML = active ? `<em>${message}</em>` : message;
         if (active) {
           controlSurface.focus();
+        }
+      }
+
+      function updatePreviewControls(active, message) {
+        previewActive = active;
+        streamBtn.textContent = active ? '停止视频预览' : '启动视频预览';
+        rebuildPreviewBtn.disabled = !signalReady;
+        if (!active) {
+          controlBtn.disabled = true;
+          updateControlState(false, message || '预览未启动');
+        }
+        if (message) {
+          setStageStatus(message);
         }
       }
 
@@ -1014,6 +1040,7 @@ INDEX_HTML = """<!doctype html>
         clearQualityRenegotiateTimer();
         clearMediaReconnectTimer();
         activeNegotiatedProfileKey = null;
+        updatePreviewControls(false, 'signal lost');
         if (peerConnection) {
           const closingConnection = peerConnection;
           await closingConnection.close();
@@ -1180,6 +1207,7 @@ INDEX_HTML = """<!doctype html>
             updateSessionStatus('控制会话已认证', true);
             overlayEl.textContent = 'signal ready';
             setStageStatus('signal ready');
+            updatePreviewControls(previewActive, previewActive ? 'video live' : 'signal ready');
             startControlPingReporter();
             startStatsReporter();
             requestQualityState();
@@ -1398,12 +1426,13 @@ INDEX_HTML = """<!doctype html>
 
         peerConnection = new RTCPeerConnection({ iceServers: [] });
         const connection = peerConnection;
+        updatePreviewControls(true, 'negotiating');
         connection.addTransceiver('video', { direction: 'recvonly' });
 
         connection.addEventListener('track', (event) => {
           remoteVideo.srcObject = event.streams[0];
           overlayEl.textContent = 'video live';
-          setStageStatus('video live');
+          updatePreviewControls(true, 'video live');
           controlBtn.disabled = false;
           mediaReconnectAttempts = 0;
           logMedia('remote track attached', {
@@ -1452,6 +1481,31 @@ INDEX_HTML = """<!doctype html>
           iceComplete,
           iceGatheringState: connection.iceGatheringState,
         });
+      }
+
+      async function stopPreview({ notifyHost = true, keepDesired = false } = {}) {
+        if (!keepDesired) {
+          previewDesired = false;
+        }
+        clearMediaReconnectTimer();
+        clearQualityRenegotiateTimer();
+        stopQualityStatsReporter();
+        activeNegotiatedProfileKey = null;
+        updateControlState(false, '预览已停止');
+
+        if (notifyHost && signalSocket && signalSocket.readyState === WebSocket.OPEN) {
+          signalSocket.send(JSON.stringify({ type: 'webrtc_close' }));
+        }
+        if (peerConnection) {
+          const closingConnection = peerConnection;
+          await closingConnection.close();
+          if (peerConnection === closingConnection) {
+            peerConnection = null;
+          }
+        }
+        remoteVideo.srcObject = null;
+        overlayEl.textContent = signalReady ? 'signal ready' : 'signal idle';
+        updatePreviewControls(false, 'preview stopped');
       }
 
       function scheduleMediaReconnect(reason) {
@@ -1530,6 +1584,7 @@ INDEX_HTML = """<!doctype html>
         clearMediaReconnectTimer();
         stopQualityStatsReporter();
         updateControlState(false, '显示器已切换，请重新启动视频预览');
+        updatePreviewControls(false, 'display switched');
         controlBtn.disabled = true;
         if (peerConnection) {
           await peerConnection.close();
@@ -1973,12 +2028,47 @@ INDEX_HTML = """<!doctype html>
 
       streamBtn.addEventListener('click', async () => {
         try {
+          if (previewActive) {
+            await stopPreview();
+            return;
+          }
           await startPreview();
         } catch (error) {
           overlayEl.textContent = 'preview failed';
           setStageStatus('preview failed');
           logMedia('preview failed', { error: String(error) });
         }
+      });
+
+      rebuildPreviewBtn.addEventListener('click', async () => {
+        try {
+          await stopPreview({ notifyHost: true, keepDesired: true });
+          await startPreview();
+        } catch (error) {
+          overlayEl.textContent = 'rebuild failed';
+          setStageStatus('rebuild failed');
+          logMedia('preview rebuild failed', { error: String(error) });
+        }
+      });
+
+      fitModeBtn.addEventListener('click', () => {
+        fitMode = fitMode === 'contain' ? 'cover' : 'contain';
+        controlSurface.classList.toggle('fit-cover', fitMode === 'cover');
+        fitModeBtn.textContent = fitMode === 'cover' ? '完整显示' : '填充画面';
+      });
+
+      fullscreenBtn.addEventListener('click', async () => {
+        if (!document.fullscreenElement) {
+          await controlSurface.requestFullscreen();
+          fullscreenBtn.textContent = '退出全屏';
+          return;
+        }
+        await document.exitFullscreen();
+        fullscreenBtn.textContent = '全屏';
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        fullscreenBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
       });
 
       controlBtn.addEventListener('click', () => {
