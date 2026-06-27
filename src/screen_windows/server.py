@@ -239,6 +239,7 @@ class HostServer:
             },
             "discovery": self._discovery_manager.status,
             "system": runtime["system"],
+            "runtime": runtime,
             "stream": {
                 "source": self._frame_source.source_name,
                 "requested_source": self._config.stream.source,

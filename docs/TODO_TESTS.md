@@ -8,7 +8,7 @@
 6. 服务发现：真实 LAN 下用 `python -m screen_windows discover --method both --json` 验证 UDP/mDNS 可发现，mDNS 目标 <5 秒。
 7. 认证持久化：真实 Chrome 确认主机重启后 token 可复用且无需重新 PIN。
 8. 认证模式：Chrome 验证 `auth.mode = "none"` 无需 PIN，`auth.mode = "always"` 禁止 token 复用。
-9. Stats 协议：Chrome 确认 WS `{type:"stats"}`、`/api/health` 和媒体状态面板的系统/视频/AQE 数据长稳一致。
+9. Stats 长稳：Chrome 确认 WS stats、`/api/health.runtime` 和媒体状态面板的系统/视频/AQE 数据持续一致。
 10. 多显示器：真实 Windows 多显示器环境确认 `auth_ok.display_info.monitors` 与 `/api/health.stream.display` 一致。
 11. 显示器切换：Chrome 调用 `display_switch` 后重新启动预览，确认画面源和输入坐标基准切到目标显示器。
 12. 移动端触控：手机/平板验证单指移动/点击、双指右键、双指滚轮映射到受控端。
