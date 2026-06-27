@@ -214,7 +214,7 @@ class QualityController:
         bandwidth = signal.bandwidth_mbps if signal.bandwidth_mbps is not None else math.inf
         motion = signal.motion_ratio if signal.motion_ratio is not None else 0.0
 
-        if loss >= 5.0 or bandwidth < 0.75 or rtt > 50.0:
+        if loss >= 5.0 or rtt > 50.0:
             return QUALITY_PROFILES["limit"]
         if rtt < 5.0 and bandwidth >= 15.0 and motion >= 0.35:
             return QUALITY_PROFILES["turbo"]
@@ -222,7 +222,12 @@ class QualityController:
             return QUALITY_PROFILES["fast"]
         if rtt < 30.0 and bandwidth >= 4.0:
             return QUALITY_PROFILES["standard"]
+        if rtt < 30.0:
+            # 浏览器可用带宽估计在静态画面会偏低，低 RTT/零丢包时不单独降级。
+            return QUALITY_PROFILES["standard"]
         if rtt < 50.0 and bandwidth >= 1.5:
+            return QUALITY_PROFILES["eco"]
+        if rtt < 50.0:
             return QUALITY_PROFILES["eco"]
         return QUALITY_PROFILES["limit"]
 

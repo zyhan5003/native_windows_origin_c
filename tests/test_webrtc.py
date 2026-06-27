@@ -33,6 +33,24 @@ def test_apply_video_bandwidth_to_sdp_updates_only_video_section() -> None:
     assert "b=AS:500" not in updated
 
 
+def test_apply_video_bandwidth_to_sdp_inserts_after_late_ice_candidates() -> None:
+    sdp = "\r\n".join(
+        [
+            "v=0",
+            "m=video 5052 UDP/TLS/RTP/SAVPF 96",
+            "c=IN IP4 192.168.0.10",
+            "a=candidate:abc 1 udp 2130706431 192.168.0.10 5052 typ host",
+            "a=ice-ufrag:test",
+            "a=rtpmap:96 VP8/90000",
+            "",
+        ]
+    )
+
+    updated = apply_video_bandwidth_to_sdp(sdp, 0.5)
+
+    assert "m=video 5052 UDP/TLS/RTP/SAVPF 96\r\nc=IN IP4 192.168.0.10\r\nb=AS:500" in updated
+
+
 def test_source_video_track_downscales_to_quality_profile() -> None:
     asyncio.run(_test_source_video_track_downscales_to_quality_profile())
 

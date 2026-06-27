@@ -235,7 +235,13 @@ class WebRtcSession:
         await self._pc.setLocalDescription(answer)
         await wait_for_ice_complete(self._pc)
         assert self._pc.localDescription is not None
-        return self._pc.localDescription
+        return RTCSessionDescription(
+            sdp=apply_video_bandwidth_to_sdp(
+                self._pc.localDescription.sdp,
+                target_profile.bitrate_mbps,
+            ),
+            type=self._pc.localDescription.type,
+        )
 
     def _current_quality_profile(self) -> QualityProfile:
         if self._quality_profile_provider is None:

@@ -36,3 +36,25 @@ def test_quality_controller_merges_partial_signals() -> None:
     assert state.last_signal.rtt_ms == 8
     assert state.last_signal.bandwidth_mbps == 12
     assert state.last_signal.motion_ratio == 0.42
+
+
+def test_quality_controller_does_not_treat_missing_bandwidth_as_weak_network() -> None:
+    controller = QualityController(mode="auto", profile="standard")
+
+    state = controller.update(QualitySignal(rtt_ms=4, motion_ratio=0.5), now=1.0)
+
+    assert state.profile.key == "standard"
+    assert state.pending_profile is not None
+    assert state.pending_profile.key == "turbo"
+
+
+def test_quality_controller_does_not_downgrade_on_low_bitrate_estimate_when_rtt_is_good() -> None:
+    controller = QualityController(mode="auto", profile="standard")
+
+    state = controller.update(
+        QualitySignal(rtt_ms=2, packet_loss=0, bandwidth_mbps=0.3),
+        now=1.0,
+    )
+
+    assert state.profile.key == "standard"
+    assert state.pending_profile is None

@@ -1335,14 +1335,19 @@ INDEX_HTML = """<!doctype html>
             maybeSetSignal(signals, 'rtt_ms', latestControlRttMs);
           }
 
+        const availableBitrate = candidatePair && Number.isFinite(candidatePair.availableIncomingBitrate)
+          ? candidatePair.availableIncomingBitrate
+          : null;
+        if (availableBitrate !== null && availableBitrate > 0) {
+          // AQE 只用 WebRTC 可用带宽估计决策，避免静态画面低吞吐被误判成弱网。
+          maybeSetSignal(signals, 'bandwidth_mbps', availableBitrate / 1000000);
+        }
+
         if (previousInboundVideoStats) {
           const elapsedMs = inboundVideo.timestamp - previousInboundVideoStats.timestamp;
           const receivedBytes = inboundVideo.bytesReceived - previousInboundVideoStats.bytesReceived;
           const packetsReceived = inboundVideo.packetsReceived - previousInboundVideoStats.packetsReceived;
           const packetsLost = inboundVideo.packetsLost - previousInboundVideoStats.packetsLost;
-          if (elapsedMs > 0 && receivedBytes >= 0) {
-            maybeSetSignal(signals, 'bandwidth_mbps', (receivedBytes * 8) / elapsedMs / 1000);
-          }
           const packetTotal = packetsReceived + Math.max(packetsLost, 0);
           if (packetTotal > 0) {
             maybeSetSignal(signals, 'packet_loss', (Math.max(packetsLost, 0) / packetTotal) * 100);
