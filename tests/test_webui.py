@@ -14,3 +14,12 @@ def test_webui_invalid_token_stops_reconnect_until_pin_is_provided() -> None:
 def test_webui_reuses_single_token_clear_helper() -> None:
     assert "function clearStoredAuthToken()" in INDEX_HTML
     assert INDEX_HTML.count("localStorage.removeItem('screen_windows_token')") == 1
+
+
+def test_webui_renders_video_performance_stats() -> None:
+    assert 'id="mediaStats"' in INDEX_HTML
+    assert "function renderMediaStats(runtime)" in INDEX_HTML
+    assert "video.effective_fps" in INDEX_HTML
+    assert "video.motion_ratio" in INDEX_HTML
+    assert "video.capture_ms" in INDEX_HTML
+    assert "system.cpu_percent" in INDEX_HTML

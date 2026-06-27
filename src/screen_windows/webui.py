@@ -423,6 +423,10 @@ INDEX_HTML = """<!doctype html>
             <div id="displayStatus" class="status-line">等待认证</div>
           </div>
           <div class="status-card">
+            <strong>性能面板</strong>
+            <div id="mediaStats" class="status-line">等待视频 stats</div>
+          </div>
+          <div class="status-card">
             <strong>信令日志</strong>
             <pre id="signalLog">尚未建立连接。</pre>
           </div>
@@ -498,6 +502,7 @@ INDEX_HTML = """<!doctype html>
       const displaySelect = document.getElementById('displaySelect');
       const displayApplyBtn = document.getElementById('displayApplyBtn');
       const displayStatusEl = document.getElementById('displayStatus');
+      const mediaStatsEl = document.getElementById('mediaStats');
 
       function updateSessionStatus(text, accent = false) {
         sessionStatusEl.innerHTML = accent ? `<em>${text}</em>` : text;
@@ -658,6 +663,33 @@ INDEX_HTML = """<!doctype html>
         const profile = state.profile;
         const pending = state.pending_profile ? `，候选 ${state.pending_profile.name}` : '';
         qualityStatusEl.innerHTML = `<em>${profile.name} ${profile.width}x${profile.height} @ ${profile.fps}fps / ${profile.bitrate_mbps}Mbps${pending}</em>`;
+      }
+
+      function formatMetric(value, digits = 1, suffix = '') {
+        const numberValue = Number(value);
+        if (!Number.isFinite(numberValue)) {
+          return `--${suffix}`;
+        }
+        return `${numberValue.toFixed(digits)}${suffix}`;
+      }
+
+      function renderMediaStats(runtime) {
+        const video = runtime && runtime.webrtc && runtime.webrtc.sessions && runtime.webrtc.sessions[0]
+          ? runtime.webrtc.sessions[0].video
+          : null;
+        if (!video) {
+          mediaStatsEl.textContent = '等待视频 stats';
+          return;
+        }
+        const system = runtime.system || {};
+        // 保持一行显示，便于真实长稳验收时截图/抄录关键证据。
+        mediaStatsEl.innerHTML = `<em>${video.target_profile || 'unknown'} ${video.last_width || 0}x${video.last_height || 0}</em>`
+          + ` · FPS ${video.effective_fps || 0}/${video.target_fps || 0}`
+          + ` · motion ${formatMetric((video.motion_ratio || 0) * 100, 1, '%')}`
+          + ` · cap ${formatMetric(video.capture_ms, 2, 'ms')}`
+          + ` · resize ${formatMetric(video.resize_ms, 2, 'ms')}`
+          + ` · CPU ${formatMetric(system.cpu_percent, 1, '%')}`
+          + ` · MEM ${formatMetric(system.memory_rss_mb, 1, 'MB')}`;
       }
 
       function stopQualityStatsReporter() {
@@ -1297,6 +1329,7 @@ INDEX_HTML = """<!doctype html>
           hostInfo.quality = runtime.quality || hostInfo.quality;
           healthEl.textContent = JSON.stringify(hostInfo, null, 2);
         }
+        renderMediaStats(runtime);
         const video = runtime.webrtc && runtime.webrtc.sessions && runtime.webrtc.sessions[0]
           ? runtime.webrtc.sessions[0].video
           : null;

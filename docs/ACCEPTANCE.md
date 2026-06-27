@@ -46,3 +46,4 @@ python -m screen_windows bench-encode
 - 2026-06-27：`/api/health.runtime` 与 WS `{type:"stats"}.runtime` 使用同形快照，便于长稳对账。
 - 2026-06-27：显示器切换会同步更新输入坐标基准；SendInput 鼠标绝对坐标按虚拟桌面边界映射。
 - 2026-06-27：WebRTC Track 静态画面会降到低有效 FPS，stats 暴露 `target_fps/effective_fps/motion_ratio`。
+- 2026-06-27 Chrome MCP：Web UI 性能面板可见；页面、health、favicon 请求正常，控制台无 error/warn/issue。
