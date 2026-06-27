@@ -783,7 +783,8 @@
       let resolveSignalReady = null;
       let rejectSignalReady = null;
       let signalReady = false;
-      let authToken = localStorage.getItem('screen_windows_token') || '';
+      const authTokenStorageKey = 'screen_windows_token';
+      let authToken = readStoredAuthToken();
       let peerConnection = null;
       let previewDesired = false;
       let previewActive = false;
@@ -891,6 +892,26 @@
           rows.push(JSON.stringify(payload, null, 2));
         }
         signalLogEl.textContent = rows.join('\\n');
+      }
+
+      function sendSocketMessage(socket, payload, { requireReady = false } = {}) {
+        if (!socket || socket.readyState !== WebSocket.OPEN || (requireReady && !signalReady)) {
+          return false;
+        }
+        try {
+          socket.send(JSON.stringify(payload));
+          return true;
+        } catch (error) {
+          logSignal('send failed', { type: payload && payload.type, error: String(error) });
+          if (socket === signalSocket) {
+            scheduleSignalReconnect();
+          }
+          return false;
+        }
+      }
+
+      function sendSignalMessage(payload, options) {
+        return sendSocketMessage(signalSocket, payload, options);
       }
 
       function logMedia(message, payload) {
@@ -1041,7 +1062,14 @@
           resolveFileAccess = resolve;
           rejectFileAccess = reject;
         });
-        signalSocket.send(JSON.stringify({ type: 'file_access' }));
+        fileAccessPromise.catch(() => {});
+        if (!sendSignalMessage({ type: 'file_access' }, { requireReady: true })) {
+          rejectFileAccess(new Error('control session not ready'));
+          fileAccessPromise = null;
+          resolveFileAccess = null;
+          rejectFileAccess = null;
+          throw new Error('control session not ready');
+        }
         fileStatusEl.innerHTML = '<em>正在申请文件访问票据...</em>';
         await fileAccessPromise;
       }
@@ -1234,8 +1262,21 @@
         }
       }
 
+      function readStoredAuthToken() {
+        try {
+          return window.localStorage.getItem(authTokenStorageKey) || '';
+        } catch (error) {
+          // 部分手机 WebView/隐私模式会禁用 localStorage，认证仍可用 PIN 完成。
+          return '';
+        }
+      }
+
       function clearStoredAuthToken() {
-        localStorage.removeItem('screen_windows_token');
+        try {
+          window.localStorage.removeItem(authTokenStorageKey);
+        } catch (error) {
+          logSignal('token storage unavailable', { error: String(error) });
+        }
         authToken = '';
       }
 
@@ -1375,7 +1416,11 @@
           return;
         }
         authToken = token;
-        localStorage.setItem('screen_windows_token', authToken);
+        try {
+          window.localStorage.setItem(authTokenStorageKey, authToken);
+        } catch (error) {
+          logSignal('token storage unavailable', { error: String(error) });
+        }
       }
 
       async function openSignalSession() {
@@ -1505,11 +1550,16 @@
           if (payload.type === 'auth_error') {
             if (authToken && normalizedPin()) {
               clearStoredAuthToken();
-              socket.send(JSON.stringify({
+              if (!sendSocketMessage(socket, {
                 type: 'auth',
                 version: '0.1.0',
                 pin: normalizedPin(),
-              }));
+              })) {
+                const error = new Error('control session not ready');
+                rejectPendingSignalReady(error);
+                updateSessionStatus('控制会话已断开，请重新连接');
+                return;
+              }
               updateSessionStatus('令牌失效，回退到 PIN 配对...', true);
               return;
             }
@@ -1638,13 +1688,18 @@
         }
         if (canReuseToken() && authToken && canSignAuthToken()) {
           const signature = await computeSignature(authToken, timestamp);
-          socket.send(JSON.stringify({
+          const sent = sendSocketMessage(socket, {
             type: 'auth',
             version: '0.1.0',
             token: authToken,
             timestamp,
             signature,
-          }));
+          });
+          if (!sent) {
+            const error = new Error('control session not ready');
+            rejectPendingSignalReady(error);
+            throw error;
+          }
           updateSessionStatus('尝试复用本地令牌...', true);
         } else {
           const authPayload = {
@@ -1654,7 +1709,11 @@
           if (authMode() !== 'none') {
             authPayload.pin = normalizedPin();
           }
-          socket.send(JSON.stringify(authPayload));
+          if (!sendSocketMessage(socket, authPayload)) {
+            const error = new Error('control session not ready');
+            rejectPendingSignalReady(error);
+            throw error;
+          }
           updateSessionStatus(authMode() === 'none' ? '无认证模式握手...' : '使用 PIN 发起配对...', true);
         }
         return signalReadyPromise;
@@ -1742,11 +1801,13 @@
         await connection.setLocalDescription(offer);
         const iceComplete = await waitForIceGatheringComplete(connection);
 
-        signalSocket.send(JSON.stringify({
+        if (!sendSignalMessage({
           type: 'webrtc_offer',
           description_type: connection.localDescription.type,
           sdp: connection.localDescription.sdp,
-        }));
+        }, { requireReady: true })) {
+          throw new Error('control session not ready');
+        }
         activeNegotiatedProfileKey = hostInfo && hostInfo.quality
           ? qualityProfileKey(hostInfo.quality.profile)
           : null;
@@ -1771,7 +1832,7 @@
         updateControlState(false, '预览已停止');
 
         if (notifyHost && signalSocket && signalSocket.readyState === WebSocket.OPEN) {
-          signalSocket.send(JSON.stringify({ type: 'webrtc_close' }));
+          sendSignalMessage({ type: 'webrtc_close' });
         }
         if (peerConnection) {
           const closingConnection = peerConnection;
@@ -1891,10 +1952,13 @@
         if (!displayEnabled || !signalSocket || signalSocket.readyState !== WebSocket.OPEN) {
           return;
         }
-        signalSocket.send(JSON.stringify({
+        if (!sendSignalMessage({
           type: 'display_switch',
           monitor: Number(displaySelect.value),
-        }));
+        })) {
+          displayStatusEl.textContent = '控制会话已断开，请重新连接';
+          return;
+        }
         displayStatusEl.innerHTML = '<em>正在切换...</em>';
       }
 
@@ -1944,11 +2008,13 @@
         if (!signalSocket || signalSocket.readyState !== WebSocket.OPEN || !signalReady) {
           throw new Error('control session not ready');
         }
-        signalSocket.send(JSON.stringify({
+        if (!sendSignalMessage({
           type: 'input',
           seq: ++inputSequence,
           events: [{ type: 'text', text }],
-        }));
+        }, { requireReady: true })) {
+          throw new Error('control session not ready');
+        }
       }
 
       function isEditableTarget(target) {
@@ -1985,17 +2051,17 @@
           seq: ++inputSequence,
           events: pendingInputEvents.splice(0, pendingInputEvents.length),
         };
-        signalSocket.send(JSON.stringify(payload));
+        sendSignalMessage(payload);
       }
 
       function requestQualityState() {
         if (!qualityEnabled || !signalSocket || signalSocket.readyState !== WebSocket.OPEN) {
           return;
         }
-        signalSocket.send(JSON.stringify({
+        sendSignalMessage({
           type: 'quality',
           action: 'state',
-        }));
+        });
       }
 
       function startControlPingReporter() {
@@ -2008,10 +2074,10 @@
         if (!signalSocket || signalSocket.readyState !== WebSocket.OPEN) {
           return;
         }
-        signalSocket.send(JSON.stringify({
+        sendSignalMessage({
           type: 'ping',
           t: Date.now(),
-        }));
+        });
       }
 
       function startStatsReporter() {
@@ -2024,7 +2090,7 @@
         if (!signalSocket || signalSocket.readyState !== WebSocket.OPEN) {
           return;
         }
-        signalSocket.send(JSON.stringify({ type: 'stats' }));
+        sendSignalMessage({ type: 'stats' });
       }
 
       function renderRuntimeStats(runtime) {
@@ -2133,11 +2199,11 @@
         if (!qualityEnabled || !signalSocket || signalSocket.readyState !== WebSocket.OPEN) {
           return;
         }
-        signalSocket.send(JSON.stringify({
+        sendSignalMessage({
           type: 'quality',
           action: 'signals',
           signals,
-        }));
+        });
       }
 
       async function reportQualityStats() {
@@ -2174,7 +2240,10 @@
         } else {
           payload.signals = {};
         }
-        signalSocket.send(JSON.stringify(payload));
+        if (!sendSignalMessage(payload)) {
+          qualityStatusEl.textContent = '控制会话已断开，请重新连接';
+          return;
+        }
         qualityStatusEl.innerHTML = '<em>正在应用...</em>';
       }
 
@@ -2419,13 +2488,24 @@
       });
 
       fullscreenBtn.addEventListener('click', async () => {
-        if (!document.fullscreenElement) {
-          await controlSurface.requestFullscreen();
-          fullscreenBtn.textContent = '退出全屏';
-          return;
+        try {
+          if (!document.fullscreenElement) {
+            if (!controlSurface.requestFullscreen) {
+              setStageStatus('当前浏览器不支持全屏');
+              return;
+            }
+            await controlSurface.requestFullscreen();
+            fullscreenBtn.textContent = '退出全屏';
+            return;
+          }
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          }
+          fullscreenBtn.textContent = '全屏';
+        } catch (error) {
+          setStageStatus('全屏被浏览器拦截');
+          logMedia('fullscreen failed', { error: String(error) });
         }
-        await document.exitFullscreen();
-        fullscreenBtn.textContent = '全屏';
       });
 
       document.addEventListener('fullscreenchange', () => {
@@ -2450,18 +2530,21 @@
 
       clipboardReadBtn.addEventListener('click', async () => {
         await openSignalSession();
-        signalSocket.send(JSON.stringify({ type: 'clipboard_read' }));
-        clipboardStatusEl.innerHTML = '<em>正在读取...</em>';
+        if (sendSignalMessage({ type: 'clipboard_read' }, { requireReady: true })) {
+          clipboardStatusEl.innerHTML = '<em>正在读取...</em>';
+        } else {
+          clipboardStatusEl.textContent = '控制会话未就绪，请重新连接';
+        }
       });
 
       clipboardWriteBtn.addEventListener('click', async () => {
         await openSignalSession();
-        signalSocket.send(JSON.stringify({
+        const sent = sendSignalMessage({
           type: 'clipboard_write',
           mime: 'text/plain',
           text: clipboardText.value,
-        }));
-        clipboardStatusEl.innerHTML = '<em>正在写入...</em>';
+        }, { requireReady: true });
+        clipboardStatusEl.innerHTML = sent ? '<em>正在写入...</em>' : '控制会话未就绪，请重新连接';
       });
 
       remoteTextSendBtn.addEventListener('click', async () => {
@@ -2492,23 +2575,33 @@
           return;
         }
         if (offset >= activeFileUpload.file.size) {
-          signalSocket.send(JSON.stringify({
+          if (!sendSignalMessage({
             type: 'file_req',
             id: activeFileUpload.id,
             action: 'complete',
-          }));
+          }, { requireReady: true })) {
+            fileStatusEl.textContent = '控制会话已断开，请重新上传';
+            activeFileUpload = null;
+            fileUploadBtn.disabled = false;
+            return;
+          }
           fileStatusEl.innerHTML = '<em>正在完成...</em>';
           return;
         }
 
         const end = Math.min(offset + activeFileUpload.chunkSize, activeFileUpload.file.size);
         const buffer = await activeFileUpload.file.slice(offset, end).arrayBuffer();
-        signalSocket.send(JSON.stringify({
+        if (!sendSignalMessage({
           type: 'file_chunk',
           id: activeFileUpload.id,
           offset,
           data: bytesToBase64(new Uint8Array(buffer)),
-        }));
+        }, { requireReady: true })) {
+          fileStatusEl.textContent = '控制会话已断开，请重新上传';
+          activeFileUpload = null;
+          fileUploadBtn.disabled = false;
+          return;
+        }
         const percent = Math.round((end / Math.max(activeFileUpload.file.size, 1)) * 100);
         fileStatusEl.innerHTML = `<em>上传中 ${percent}%</em>`;
       }
@@ -2531,13 +2624,17 @@
         };
         fileUploadBtn.disabled = true;
         fileStatusEl.innerHTML = '<em>正在准备...</em>';
-        signalSocket.send(JSON.stringify({
+        if (!sendSignalMessage({
           type: 'file_req',
           id: activeFileUpload.id,
           action: 'send',
           name: file.name,
           size: file.size,
-        }));
+        }, { requireReady: true })) {
+          fileStatusEl.textContent = '控制会话已断开，请重新上传';
+          activeFileUpload = null;
+          fileUploadBtn.disabled = false;
+        }
       });
 
       fileRefreshBtn.addEventListener('click', async () => {

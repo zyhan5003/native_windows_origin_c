@@ -8,6 +8,7 @@ from screen_windows.app.launcher import (
     LauncherState,
     build_config_from_launcher_payload,
 )
+from screen_windows.web.webui import LAUNCHER_HTML
 
 
 def test_launcher_payload_builds_host_config() -> None:
@@ -62,6 +63,14 @@ def test_launcher_payload_rejects_same_http_and_ws_port() -> None:
         assert "must be different" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_launcher_copy_button_falls_back_without_clipboard_api() -> None:
+    assert "async function copyText(value)" in LAUNCHER_HTML
+    assert "navigator.clipboard && navigator.clipboard.writeText" in LAUNCHER_HTML
+    assert 'document.createElement("textarea")' in LAUNCHER_HTML
+    assert 'document.execCommand("copy")' in LAUNCHER_HTML
+    assert "复制失败，请手动复制" in LAUNCHER_HTML
 
 
 def test_launcher_state_starts_and_stops_host(tmp_path: Path) -> None:

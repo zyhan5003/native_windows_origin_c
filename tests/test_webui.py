@@ -13,7 +13,23 @@ def test_webui_invalid_token_stops_reconnect_until_pin_is_provided() -> None:
 
 def test_webui_reuses_single_token_clear_helper() -> None:
     assert "function clearStoredAuthToken()" in INDEX_HTML
-    assert INDEX_HTML.count("localStorage.removeItem('screen_windows_token')") == 1
+    assert "const authTokenStorageKey = 'screen_windows_token';" in INDEX_HTML
+    assert "function readStoredAuthToken()" in INDEX_HTML
+    assert "window.localStorage.getItem(authTokenStorageKey)" in INDEX_HTML
+    assert "window.localStorage.removeItem(authTokenStorageKey)" in INDEX_HTML
+    assert "window.localStorage.setItem(authTokenStorageKey, authToken)" in INDEX_HTML
+    assert "localStorage.getItem('screen_windows_token')" not in INDEX_HTML
+    assert "localStorage.removeItem('screen_windows_token')" not in INDEX_HTML
+    assert "localStorage.setItem('screen_windows_token'" not in INDEX_HTML
+
+
+def test_webui_wraps_signal_sends_for_disconnect_races() -> None:
+    assert "function sendSocketMessage(socket, payload, { requireReady = false } = {})" in INDEX_HTML
+    assert "try {" in INDEX_HTML
+    assert "socket.send(JSON.stringify(payload));" in INDEX_HTML
+    assert "logSignal('send failed'" in INDEX_HTML
+    assert "function sendSignalMessage(payload, options)" in INDEX_HTML
+    assert "signalSocket.send(JSON.stringify" not in INDEX_HTML
 
 
 def test_webui_does_not_reuse_token_without_web_crypto_hmac() -> None:
@@ -90,7 +106,9 @@ def test_webui_has_preview_lifecycle_and_view_controls() -> None:
     assert "async function stopPreview" in INDEX_HTML
     assert "type: 'webrtc_close'" in INDEX_HTML
     assert "streamBtn.textContent = active ? '停止画面预览' : '2. 启动画面预览';" in INDEX_HTML
+    assert "if (!controlSurface.requestFullscreen)" in INDEX_HTML
     assert "controlSurface.requestFullscreen()" in INDEX_HTML
+    assert "全屏被浏览器拦截" in INDEX_HTML
     assert "controlSurface.classList.toggle('fit-cover'" in INDEX_HTML
 
 
