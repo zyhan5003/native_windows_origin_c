@@ -29,3 +29,7 @@ python -m screen_windows bench-encode
 6. 性能：长稳记录 `/api/health.system` 样本数/峰值和视频 `capture_ms/resize_ms`。
 
 细项待测记录见 `docs/TODO_TESTS.md`。
+
+## 最近烟测
+
+- 2026-06-27 Chrome MCP：本机 `dxcam` 预览已连通，WebRTC `connected`，视频 `1280x720` live track，控制台无错误。

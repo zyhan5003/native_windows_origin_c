@@ -173,7 +173,14 @@ async def wait_for_ice_complete(pc: RTCPeerConnection, timeout: float = 5.0) -> 
         if pc.iceGatheringState == "complete":
             completed.set()
 
-    await asyncio.wait_for(completed.wait(), timeout=timeout)
+    try:
+        await asyncio.wait_for(completed.wait(), timeout=timeout)
+    except TimeoutError:
+        # LAN 场景允许用已收集候选继续协商，避免无 STUN 环境卡住 answer。
+        LOGGER.warning(
+            "ice gathering timed out; continuing with state=%s",
+            pc.iceGatheringState,
+        )
 
 
 class WebRtcSession:

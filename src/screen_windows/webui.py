@@ -439,6 +439,7 @@ INDEX_HTML = """<!doctype html>
       let signalReadyPromise = null;
       let resolveSignalReady = null;
       let rejectSignalReady = null;
+      let signalReady = false;
       let authToken = localStorage.getItem('screen_windows_token') || '';
       let peerConnection = null;
       let previewDesired = false;
@@ -703,6 +704,7 @@ INDEX_HTML = """<!doctype html>
         resolveSignalReady = null;
         rejectSignalReady = null;
         signalReadyPromise = null;
+        signalReady = false;
       }
 
       async function closeLocalPreviewAfterSignalLoss() {
@@ -788,6 +790,9 @@ INDEX_HTML = """<!doctype html>
         if (!hostInfo) {
           await loadHealth();
         }
+        if (signalSocket && signalSocket.readyState === WebSocket.OPEN && signalReady) {
+          return;
+        }
         if (signalSocket && signalSocket.readyState === WebSocket.OPEN && signalReadyPromise) {
           return signalReadyPromise;
         }
@@ -802,6 +807,7 @@ INDEX_HTML = """<!doctype html>
           resolveSignalReady = resolve;
           rejectSignalReady = reject;
         });
+        signalReady = false;
         updateSessionStatus('正在建立控制会话...', true);
         logSignal('connecting', { wsUrl });
 
@@ -822,6 +828,7 @@ INDEX_HTML = """<!doctype html>
           if (signalSocket === socket) {
             signalSocket = null;
           }
+          signalReady = false;
           rejectPendingSignalReady(new Error('signal socket closed'));
           stopControlPingReporter();
           stopStatsReporter();
@@ -858,12 +865,17 @@ INDEX_HTML = """<!doctype html>
             startControlPingReporter();
             startStatsReporter();
             requestQualityState();
-            await refreshFileList();
+            signalReady = true;
             if (resolveSignalReady) {
               resolveSignalReady();
             }
             resolveSignalReady = null;
             rejectSignalReady = null;
+            signalReadyPromise = null;
+            // 文件列表是附属能力，不能阻塞视频预览主链路的认证完成。
+            refreshFileList().catch((error) => {
+              fileStatusEl.textContent = `文件列表错误: ${error}`;
+            });
             if (reconnectingSignal && previewDesired) {
               reconnectingSignal = false;
               await startPreview();
@@ -1011,17 +1023,29 @@ INDEX_HTML = """<!doctype html>
         return signalReadyPromise;
       }
 
-      async function waitForIceGatheringComplete(connection) {
+      async function waitForIceGatheringComplete(connection, timeoutMs = 3000) {
         if (connection.iceGatheringState === 'complete') {
-          return;
+          return true;
         }
-        await new Promise((resolve) => {
+
+        return await new Promise((resolve) => {
+          let done = false;
+          const finish = (completed) => {
+            if (done) {
+              return;
+            }
+            done = true;
+            window.clearTimeout(timer);
+            connection.removeEventListener('icegatheringstatechange', handler);
+            resolve(completed);
+          };
           const handler = () => {
             if (connection.iceGatheringState === 'complete') {
-              connection.removeEventListener('icegatheringstatechange', handler);
-              resolve();
+              finish(true);
             }
           };
+          // 局域网无 STUN/TURN 时，部分 Chrome 环境不会及时触发 complete；超时后继续用已收集候选协商。
+          const timer = window.setTimeout(() => finish(false), timeoutMs);
           connection.addEventListener('icegatheringstatechange', handler);
         });
       }
@@ -1062,7 +1086,7 @@ INDEX_HTML = """<!doctype html>
 
         const offer = await connection.createOffer();
         await connection.setLocalDescription(offer);
-        await waitForIceGatheringComplete(connection);
+        const iceComplete = await waitForIceGatheringComplete(connection);
 
         signalSocket.send(JSON.stringify({
           type: 'webrtc_offer',
@@ -1074,7 +1098,11 @@ INDEX_HTML = """<!doctype html>
           : null;
         startQualityStatsReporter();
         overlayEl.textContent = 'negotiating';
-        logMedia('offer sent', { type: connection.localDescription.type });
+        logMedia('offer sent', {
+          type: connection.localDescription.type,
+          iceComplete,
+          iceGatheringState: connection.iceGatheringState,
+        });
       }
 
       function scheduleQualityRenegotiation(state) {

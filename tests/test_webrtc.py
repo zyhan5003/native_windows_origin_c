@@ -4,7 +4,11 @@ import asyncio
 
 from screen_windows.quality import QUALITY_PROFILES, QualitySignal
 from screen_windows.video_source import SyntheticFrameSource
-from screen_windows.webrtc import SourceVideoTrack, apply_video_bandwidth_to_sdp
+from screen_windows.webrtc import (
+    SourceVideoTrack,
+    apply_video_bandwidth_to_sdp,
+    wait_for_ice_complete,
+)
 
 
 def test_apply_video_bandwidth_to_sdp_updates_only_video_section() -> None:
@@ -60,3 +64,22 @@ async def _test_source_video_track_downscales_to_quality_profile() -> None:
     assert 0 <= stats.motion_ratio <= 1
     assert len(signals) == 2
     assert signals[-1].motion_ratio == stats.motion_ratio
+
+
+def test_wait_for_ice_complete_timeout_continues() -> None:
+    asyncio.run(_test_wait_for_ice_complete_timeout_continues())
+
+
+async def _test_wait_for_ice_complete_timeout_continues() -> None:
+    class NeverCompletesPeerConnection:
+        iceGatheringState = "gathering"
+
+        def on(self, event_name: str):
+            assert event_name == "icegatheringstatechange"
+
+            def decorator(callback):
+                return callback
+
+            return decorator
+
+    await wait_for_ice_complete(NeverCompletesPeerConnection(), timeout=0.01)  # type: ignore[arg-type]
