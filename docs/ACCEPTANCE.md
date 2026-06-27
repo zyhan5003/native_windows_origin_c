@@ -12,6 +12,7 @@ python -m screen_windows host --host 127.0.0.1 --port 8765 --http-port 8766
 
 ```powershell
 Invoke-WebRequest -Uri "http://127.0.0.1:8766/api/health" -UseBasicParsing
+python -m screen_windows info --json
 python -m screen_windows discover --method both --json
 python -m screen_windows bench-encode
 ```

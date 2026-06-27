@@ -693,8 +693,6 @@ def build_backend_encoder_args(
             "1",
             "-async_depth",
             "1",
-            "-bf",
-            "0",
         ]
 
     return [

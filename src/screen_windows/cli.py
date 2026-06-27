@@ -8,6 +8,7 @@ from .bench import main as bench_main
 from .config import load_config
 from .discovery import discover_hosts
 from .host import run_host
+from .info import main as info_main
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,6 +22,10 @@ def build_parser() -> argparse.ArgumentParser:
     host_parser.add_argument("--http-port", type=int, default=None, help="覆盖 HTTP 端口")
 
     subparsers.add_parser("bench-encode", help="运行最小 FFmpeg 编码链路基准")
+
+    info_parser = subparsers.add_parser("info", help="输出环境与编码链路摘要")
+    info_parser.add_argument("--config", default=None, help="TOML 配置文件路径")
+    info_parser.add_argument("--json", action="store_true", help="输出 JSON")
 
     discover_parser = subparsers.add_parser("discover", help="扫描局域网受控端")
     discover_parser.add_argument("--config", default=None, help="TOML 配置文件路径")
@@ -52,6 +57,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "bench-encode":
         return bench_main()
+
+    if args.command == "info":
+        info_args: list[str] = []
+        if args.config is not None:
+            info_args.extend(["--config", args.config])
+        if args.json:
+            info_args.append("--json")
+        return info_main(info_args)
 
     if args.command == "discover":
         config = load_config(args.config)

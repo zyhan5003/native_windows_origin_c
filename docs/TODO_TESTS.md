@@ -19,3 +19,4 @@
 17. 显示器切换：Chrome 调用 `display_switch` 后重新启动预览，确认画面源和输入坐标基准切到目标显示器。
 18. 移动端触控：手机/平板验证单指移动/点击、双指右键、双指滚轮映射到受控端。
 19. 断线重连：Chrome 预览中重启/断开主机，确认 token 自动重连并重建视频预览。
+20. 编码门禁：真实目标机器记录 `python -m screen_windows info --json` 与 `bench-encode` 输出。

@@ -12,3 +12,13 @@ def test_cli_registers_discover_command() -> None:
     assert args.method == "both"
     assert args.timeout == 0.1
     assert args.json is True
+
+
+def test_cli_registers_info_command() -> None:
+    parser = build_parser()
+
+    args = parser.parse_args(["info", "--config", "host_config.toml", "--json"])
+
+    assert args.command == "info"
+    assert args.config == "host_config.toml"
+    assert args.json is True

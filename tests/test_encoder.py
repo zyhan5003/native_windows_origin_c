@@ -236,8 +236,6 @@ def test_build_backend_encoder_args_for_amf_and_qsv() -> None:
         "1",
         "-async_depth",
         "1",
-        "-bf",
-        "0",
     ]
 
 
