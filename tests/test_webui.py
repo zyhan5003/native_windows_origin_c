@@ -31,3 +31,15 @@ def test_webui_uses_server_file_transfer_limits() -> None:
     assert "file.size > fileTransferLimits.maxFileSize" in INDEX_HTML
     assert "chunkSize: fileTransferLimits.chunkSize" in INDEX_HTML
     assert INDEX_HTML.count("chunkSize: 64 * 1024") == 1
+
+
+def test_webui_releases_pressed_inputs_on_focus_loss() -> None:
+    assert "const pressedKeys = new Set();" in INDEX_HTML
+    assert "const pressedMouseButtons = new Set();" in INDEX_HTML
+    assert "function releasePressedInputs()" in INDEX_HTML
+    assert "sendMouseButton(button, true)" in INDEX_HTML
+    assert "sendMouseButton(button, false)" in INDEX_HTML
+    assert "sendKey(event.code, true)" in INDEX_HTML
+    assert "sendKey(event.code, false)" in INDEX_HTML
+    assert "controlSurface.addEventListener('mouseleave'" in INDEX_HTML
+    assert "window.addEventListener('blur'" in INDEX_HTML

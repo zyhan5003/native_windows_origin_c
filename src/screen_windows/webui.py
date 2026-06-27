@@ -454,6 +454,8 @@ INDEX_HTML = """<!doctype html>
       let controlActive = false;
       let inputSequence = 0;
       let pendingInputEvents = [];
+      const pressedKeys = new Set();
+      const pressedMouseButtons = new Set();
       let activeFileUpload = null;
       let fileTransferLimits = {
         chunkSize: 64 * 1024,
@@ -529,6 +531,9 @@ INDEX_HTML = """<!doctype html>
       }
 
       function updateControlState(active, message) {
+        if (!active) {
+          releasePressedInputs();
+        }
         controlActive = active;
         controlSurface.classList.toggle('control-armed', active);
         controlBtn.textContent = active ? '停止远程控制' : '启用远程控制';
@@ -1286,6 +1291,41 @@ INDEX_HTML = """<!doctype html>
         pendingInputEvents.push(eventPayload);
       }
 
+      function sendMouseButton(button, pressed) {
+        if (pressed) {
+          pressedMouseButtons.add(button);
+        } else {
+          pressedMouseButtons.delete(button);
+        }
+        pushInputEvent({ type: 'mouse_button', button, pressed });
+      }
+
+      function sendKey(code, pressed) {
+        if (pressed) {
+          pressedKeys.add(code);
+        } else {
+          pressedKeys.delete(code);
+        }
+        pushInputEvent({ type: 'key', code, pressed });
+      }
+
+      function releasePressedInputs() {
+        if (!controlActive) {
+          pressedKeys.clear();
+          pressedMouseButtons.clear();
+          return;
+        }
+        Array.from(pressedMouseButtons).forEach((button) => {
+          pushInputEvent({ type: 'mouse_button', button, pressed: false });
+        });
+        Array.from(pressedKeys).forEach((code) => {
+          pushInputEvent({ type: 'key', code, pressed: false });
+        });
+        pressedMouseButtons.clear();
+        pressedKeys.clear();
+        flushInputEvents();
+      }
+
       function flushInputEvents() {
         if (!controlActive || pendingInputEvents.length === 0) {
           return;
@@ -1540,8 +1580,8 @@ INDEX_HTML = """<!doctype html>
       }
 
       function sendMouseClick(button) {
-        pushInputEvent({ type: 'mouse_button', button, pressed: true });
-        pushInputEvent({ type: 'mouse_button', button, pressed: false });
+        sendMouseButton(button, true);
+        sendMouseButton(button, false);
       }
 
       function touchCenter(touches) {
@@ -1770,11 +1810,7 @@ INDEX_HTML = """<!doctype html>
         if (!button) {
           return;
         }
-        pushInputEvent({
-          type: 'mouse_button',
-          button,
-          pressed: true,
-        });
+        sendMouseButton(button, true);
       });
 
       controlSurface.addEventListener('mouseup', (event) => {
@@ -1786,11 +1822,11 @@ INDEX_HTML = """<!doctype html>
         if (!button) {
           return;
         }
-        pushInputEvent({
-          type: 'mouse_button',
-          button,
-          pressed: false,
-        });
+        sendMouseButton(button, false);
+      });
+
+      controlSurface.addEventListener('mouseleave', () => {
+        releasePressedInputs();
       });
 
       controlSurface.addEventListener('wheel', (event) => {
@@ -1816,6 +1852,7 @@ INDEX_HTML = """<!doctype html>
       controlSurface.addEventListener('touchcancel', (event) => {
         event.preventDefault();
         touchState = null;
+        releasePressedInputs();
       }, { passive: false });
 
       window.addEventListener('keydown', (event) => {
@@ -1826,11 +1863,7 @@ INDEX_HTML = """<!doctype html>
         if (event.repeat) {
           return;
         }
-        pushInputEvent({
-          type: 'key',
-          code: event.code,
-          pressed: true,
-        });
+        sendKey(event.code, true);
       });
 
       window.addEventListener('keyup', (event) => {
@@ -1838,11 +1871,11 @@ INDEX_HTML = """<!doctype html>
           return;
         }
         event.preventDefault();
-        pushInputEvent({
-          type: 'key',
-          code: event.code,
-          pressed: false,
-        });
+        sendKey(event.code, false);
+      });
+
+      window.addEventListener('blur', () => {
+        releasePressedInputs();
       });
 
       window.setInterval(flushInputEvents, 8);
