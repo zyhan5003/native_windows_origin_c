@@ -1,7 +1,7 @@
 # 待集中验收
 
 1. 文件传输实机边界：超大文件、真实浏览器断连后的 `.part` 清理。
-2. AQE 热切：真实 LAN 场景确认自动档位变化会影响实际 WebRTC 接收分辨率/FPS；高于捕获源的分辨率只更新目标状态、不放大源。
+2. AQE 热切：真实 LAN 场景确认自动档位变化会影响实际 WebRTC 接收分辨率/FPS；手动分辨率已确认会重建捕获源。
 3. AQE 统计：Chrome 接收 stats 与 `/api/health.webrtc.sessions[].video` 的分辨率/FPS/运动比例长稳对齐。
 4. 系统性能：真实预览/硬编/长稳场景记录 `/api/health.system` 样本数/峰值与视频 `capture_ms/resize_ms/effective_fps`。
 5. 键盘控制：Chrome 验证字母数字、修饰键、功能键、方向键、小键盘和 PrintScreen/NumLock/ScrollLock。
@@ -11,6 +11,6 @@
 9. 静态带宽：真实静态桌面确认 `motion_ratio` 接近 0 时 `effective_fps` 降低，实际接收码率同步下降。
 10. 多显示器：真实 Windows 多显示器环境确认 `auth_ok.display_info.monitors` 与 `/api/health.stream.display` 一致。
 11. 显示器切换：真实多屏下 Chrome 调用 `display_switch` 后重启预览，确认画面源和鼠标落点切到目标显示器。
-12. 移动端触控：手机/平板验证单指移动/点击、双指右键、双指滚轮映射到受控端。
+12. 移动端触控细项：补手机/平板双指右键、双指滚轮和不同屏宽手感验证；单指触摸板滑动与文本发送已过 Android 真机烟测。
 13. 断线重连：Chrome 预览中重启/断开主机，确认 token 自动重连并重建视频预览。
 14. 编码门禁：真实目标机器记录 `python -m screen_windows info --json` 与 `bench-encode` 输出。

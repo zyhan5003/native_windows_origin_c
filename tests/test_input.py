@@ -27,6 +27,13 @@ def test_parse_input_event_key() -> None:
     assert event.pressed is True
 
 
+def test_parse_input_event_text() -> None:
+    event = parse_input_event({"type": "text", "text": "你好 remote"})
+
+    assert event.kind == "text"
+    assert event.text == "你好 remote"
+
+
 def test_keyboard_mapping_covers_numpad_and_system_keys() -> None:
     assert VK_CODE_MAP["Numpad0"] == 0x60
     assert VK_CODE_MAP["Numpad9"] == 0x69
@@ -87,3 +94,61 @@ def test_windows_input_executor_maps_mouse_to_virtual_desktop(monkeypatch) -> No
     assert mouse.dx == round((640 * 65535) / 1439)
     assert mouse.dy == 0
     assert mouse.dwFlags == MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK
+
+
+def test_windows_input_executor_scales_stream_coordinates_to_display_pixels(monkeypatch) -> None:
+    sent_inputs = []
+
+    class User32:
+        def SendInput(self, count, pointer, size):
+            sent_inputs.append(pointer._obj)
+            return 1
+
+        def MapVirtualKeyW(self, vk, mode):
+            return vk
+
+    monkeypatch.setattr("screen_windows.control.input.ctypes.windll", type("Windll", (), {"user32": User32()})())
+    executor = WindowsInputExecutor(
+        display_width=1280,
+        display_height=720,
+        display_physical_width=1920,
+        display_physical_height=1080,
+        virtual_width=1920,
+        virtual_height=1080,
+    )
+
+    executor._send_mouse_move(1279, 719)
+
+    mouse = sent_inputs[0].mi
+    assert mouse.dx == 65535
+    assert mouse.dy == 65535
+
+
+def test_windows_input_executor_sends_unicode_text(monkeypatch) -> None:
+    sent_inputs = []
+
+    class User32:
+        def SendInput(self, count, pointer, size):
+            sent_inputs.append(pointer._obj)
+            return 1
+
+        def MapVirtualKeyW(self, vk, mode):
+            return vk
+
+    monkeypatch.setattr("screen_windows.control.input.ctypes.windll", type("Windll", (), {"user32": User32()})())
+    executor = WindowsInputExecutor(display_width=800, display_height=450)
+
+    executor._send_text("中A😀")
+
+    assert [item.ki.wScan for item in sent_inputs] == [
+        ord("中"),
+        ord("中"),
+        ord("A"),
+        ord("A"),
+        0xD83D,
+        0xD83D,
+        0xDE00,
+        0xDE00,
+    ]
+    assert sent_inputs[0].ki.dwFlags & 0x0004
+    assert sent_inputs[1].ki.dwFlags & 0x0002

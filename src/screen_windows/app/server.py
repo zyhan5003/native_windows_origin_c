@@ -18,7 +18,7 @@ from ..control.clipboard import ClipboardService, WindowsClipboardBackend
 from ..control.display import DisplayMonitor, enumerate_displays
 from ..control.input import InputBatch, InputExecutor, WindowsInputExecutor
 from ..media.encoder import EncoderManager
-from ..media.quality import QualityController, QualitySignal
+from ..media.quality import QualityController, QualityProfile, QualitySignal
 from ..media.video_source import build_frame_source
 from ..media.webrtc import WebRtcSession
 from ..network.discovery import DiscoveryAnnouncement, DiscoveryManager
@@ -545,7 +545,7 @@ class HostServer:
         payload: dict[str, Any],
     ) -> None:
         if str(payload.get("action", "")).lower() == "state":
-            await ws.send(json.dumps(build_quality_state(self._quality_controller.state.to_dict())))
+            await ws.send(json.dumps(build_quality_state(self._quality_controller.state.to_dict(), stream=self._stream_state_payload())))
             return
         if str(payload.get("action", "")).lower() == "signals":
             try:
@@ -555,7 +555,7 @@ class HostServer:
             except (TypeError, ValueError) as exc:
                 await ws.send(json.dumps(build_quality_error(str(exc))))
                 return
-            await ws.send(json.dumps(build_quality_state(state.to_dict())))
+            await ws.send(json.dumps(build_quality_state(state.to_dict(), stream=self._stream_state_payload())))
             return
 
         mode = str(payload.get("mode", "auto")).lower()
@@ -568,6 +568,7 @@ class HostServer:
                     fps=payload.get("fps"),
                     bitrate_mbps=payload.get("bitrate_mbps"),
                 )
+                await self._apply_manual_quality_stream_size(state.profile)
             elif mode == "auto":
                 if "signals" in payload:
                     signal = QualitySignal.from_dict(payload.get("signals"))
@@ -581,7 +582,36 @@ class HostServer:
             await ws.send(json.dumps(build_quality_error(str(exc))))
             return
 
-        await ws.send(json.dumps(build_quality_state(state.to_dict())))
+        await ws.send(json.dumps(build_quality_state(state.to_dict(), stream=self._stream_state_payload())))
+
+    async def _apply_manual_quality_stream_size(self, profile: QualityProfile) -> None:
+        monitor = self._selected_monitor()
+        width = min(profile.width, monitor.width)
+        height = min(profile.height, monitor.height)
+        fps = profile.fps
+        if (
+            self._config.stream.width == width
+            and self._config.stream.height == height
+            and self._config.stream.fps == fps
+        ):
+            return
+
+        self._config = replace(
+            self._config,
+            stream=replace(self._config.stream, width=width, height=height, fps=fps),
+        )
+        self._frame_source = await asyncio.to_thread(build_frame_source, self._config.stream)
+        self._update_input_display_bounds()
+
+    def _stream_state_payload(self) -> dict[str, Any]:
+        return {
+            "source": self._frame_source.source_name,
+            "width": self._config.stream.width,
+            "height": self._config.stream.height,
+            "fps": self._config.stream.fps,
+            "monitor": self._config.stream.monitor,
+            "display": self._display_info.to_dict(),
+        }
 
     async def _process_display_switch(
         self,
@@ -639,6 +669,8 @@ class HostServer:
         return {
             "display_width": self._frame_source.width,
             "display_height": self._frame_source.height,
+            "display_physical_width": monitor.width,
+            "display_physical_height": monitor.height,
             "display_left": monitor.left,
             "display_top": monitor.top,
             "virtual_left": virtual_left,

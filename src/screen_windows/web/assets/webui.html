@@ -344,6 +344,12 @@
         font-weight: 700;
         box-shadow: 0 14px 34px rgba(182, 240, 156, 0.2);
       }
+      .primary.connected {
+        background: rgba(255, 117, 104, 0.12);
+        color: #ffd5cf;
+        border: 1px solid rgba(255, 117, 104, 0.28);
+        box-shadow: none;
+      }
       .secondary {
         background: rgba(255, 255, 255, 0.08);
         color: var(--text);
@@ -540,7 +546,7 @@
             <div class="guide-step">
               <span class="step-number">3</span>
               <strong>启用键鼠</strong>
-              <span>需要操作远端时再开启；点进画面后键盘和鼠标才会发送到主机。</span>
+              <span>需要操作远端时再开启；手机上拖动画面移动鼠标，轻点点击当前位置。</span>
             </div>
           </div>
           <div class="capability-row" aria-label="核心能力">
@@ -558,7 +564,7 @@
           </div>
           <div class="field">
             <label for="pin">配对 PIN</label>
-            <input id="pin" inputmode="numeric" autocomplete="one-time-code" placeholder="首次连接输入主机显示的 6 位 PIN" />
+            <input id="pin" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="首次连接输入主机显示的 6 位 PIN" />
             <span class="field-hint">PIN 只用于配对；令牌失效或每次询问模式下会再次需要。</span>
           </div>
           <div class="actions primary-actions">
@@ -576,7 +582,7 @@
           </div>
           <div class="status-card">
             <strong>键鼠状态</strong>
-            <p class="hint">只有启用后，点击画面才会把输入发送到主机。</p>
+            <p class="hint">手机使用触摸板模式：拖动移动鼠标，轻点点击当前位置，双指滚动/右键。</p>
             <div id="controlStatus" class="status-line">未启用</div>
           </div>
           <div class="status-card">
@@ -628,6 +634,18 @@
               <button id="clipboardWriteBtn" class="secondary" disabled>写入到主机</button>
             </div>
             <div id="clipboardStatus" class="status-line">等待认证</div>
+          </div>
+          <div class="status-card">
+            <strong>手机输入</strong>
+            <p class="hint">手机软键盘输入内容后发送到远端当前焦点，适合搜索、聊天和填写表单。</p>
+            <div class="field">
+              <label for="remoteTextInput">发送到远端的文字</label>
+              <textarea id="remoteTextInput" placeholder="先在远端点中输入框，再在这里输入文字"></textarea>
+            </div>
+            <div class="actions">
+              <button id="remoteTextSendBtn" class="secondary" disabled>发送文字到主机</button>
+            </div>
+            <div id="remoteTextStatus" class="status-line">等待认证</div>
           </div>
           <div class="status-card">
             <strong>文件传输</strong>
@@ -772,6 +790,8 @@
       let statsTimer = null;
       let displayEnabled = false;
       let touchState = null;
+      let remoteCursor = null;
+      const touchPointerScale = 1.35;
       const qualityPresetDefaults = {
         turbo: { width: 1920, height: 1080, fps: 60, bitrate: 20 },
         fast: { width: 1920, height: 1080, fps: 60, bitrate: 10 },
@@ -802,6 +822,9 @@
       const clipboardReadBtn = document.getElementById('clipboardReadBtn');
       const clipboardWriteBtn = document.getElementById('clipboardWriteBtn');
       const clipboardStatusEl = document.getElementById('clipboardStatus');
+      const remoteTextInput = document.getElementById('remoteTextInput');
+      const remoteTextSendBtn = document.getElementById('remoteTextSendBtn');
+      const remoteTextStatusEl = document.getElementById('remoteTextStatus');
       const fileInput = document.getElementById('fileInput');
       const fileUploadBtn = document.getElementById('fileUploadBtn');
       const fileRefreshBtn = document.getElementById('fileRefreshBtn');
@@ -821,6 +844,12 @@
 
       function updateSessionStatus(text, accent = false) {
         sessionStatusEl.innerHTML = accent ? `<em>${text}</em>` : text;
+      }
+
+      function updateConnectButton(connected, connecting = false) {
+        connectBtn.classList.toggle('connected', connected);
+        connectBtn.disabled = connecting;
+        connectBtn.textContent = connected ? '断开主机' : (connecting ? '正在连接...' : '1. 连接主机');
       }
 
       function logSignal(message, payload) {
@@ -869,6 +898,11 @@
         clipboardReadBtn.disabled = !enabled;
         clipboardWriteBtn.disabled = !enabled;
         clipboardStatusEl.innerHTML = enabled ? `<em>${message}</em>` : message;
+      }
+
+      function updateRemoteTextControls(enabled, message) {
+        remoteTextSendBtn.disabled = !enabled;
+        remoteTextStatusEl.innerHTML = enabled ? `<em>${message}</em>` : message;
       }
 
       function updateFileControls(enabled, message) {
@@ -1043,6 +1077,18 @@
         }
       }
 
+      function applyStreamState(stream) {
+        if (!stream || !hostInfo) {
+          return;
+        }
+        hostInfo.stream = {
+          ...hostInfo.stream,
+          ...stream,
+        };
+        overlayEl.textContent = `${hostInfo.stream.source} | ${hostInfo.stream.width}x${hostInfo.stream.height} @ ${hostInfo.stream.fps}fps`;
+        renderHealthSummary(hostInfo);
+      }
+
       function applyQualityPresetToControls() {
         const preset = qualityPresetDefaults[qualityProfile.value];
         if (!preset) {
@@ -1180,6 +1226,33 @@
         }
       }
 
+      async function disconnectSignalSession({ allowReconnect = false } = {}) {
+        clearReconnectTimer();
+        reconnectingSignal = false;
+        if (!allowReconnect) {
+          autoReconnectPaused = true;
+        }
+        await stopPreview({ notifyHost: true });
+        stopControlPingReporter();
+        stopStatsReporter();
+        streamBtn.disabled = true;
+        updateConnectButton(false);
+        updateClipboardControls(false, '已断开');
+        updateRemoteTextControls(false, '已断开');
+        updateFileControls(false, '已断开');
+        updateQualityControls(false, '已断开');
+        updateDisplayControls(false, '已断开');
+        if (signalSocket) {
+          const socket = signalSocket;
+          signalSocket = null;
+          socket.close();
+        }
+        rejectPendingSignalReady(new Error('signal session disconnected'));
+        updateSessionStatus('已断开主机');
+        overlayEl.textContent = '已断开主机';
+        setStageStatus('已断开');
+      }
+
       function scheduleSignalReconnect() {
         if (!canAutoReconnect() || reconnectTimer !== null) {
           return;
@@ -1228,6 +1301,10 @@
         return hostInfo && hostInfo.auth_mode ? String(hostInfo.auth_mode).toLowerCase() : 'pin_once';
       }
 
+      function normalizedPin() {
+        return pinInput.value.replace(/\D/g, '').slice(0, 6);
+      }
+
       function canReuseToken() {
         return authMode() !== 'always' && authMode() !== 'none';
       }
@@ -1265,6 +1342,7 @@
         const wsUrl = `ws://${location.hostname}:${hostInfo.ports.ws}`;
         const socket = new WebSocket(wsUrl);
         signalSocket = socket;
+        updateConnectButton(false, true);
         signalReadyPromise = new Promise((resolve, reject) => {
           resolveSignalReady = resolve;
           rejectSignalReady = reject;
@@ -1281,6 +1359,7 @@
         } catch (error) {
           if (signalSocket === socket) {
             signalSocket = null;
+            updateConnectButton(false);
           }
           rejectPendingSignalReady(error);
           throw error;
@@ -1298,7 +1377,9 @@
           stopControlPingReporter();
           stopStatsReporter();
           streamBtn.disabled = true;
+          updateConnectButton(false);
           updateClipboardControls(false, '连接关闭');
+          updateRemoteTextControls(false, '连接关闭');
           updateFileControls(false, '连接关闭');
           updateQualityControls(false, '连接关闭');
           updateDisplayControls(false, '连接关闭');
@@ -1326,7 +1407,9 @@
             clearReconnectTimer();
             reconnectAttempts = 0;
             streamBtn.disabled = false;
+            updateConnectButton(true);
             updateClipboardControls(Boolean(payload.capabilities && payload.capabilities.clipboard), '可同步');
+            updateRemoteTextControls(true, '可发送');
             updateFileControls(Boolean(payload.capabilities && payload.capabilities.file_transfer), '可上传');
             updateFileTransferLimits(payload.file_transfer);
             updateQualityControls(Boolean(payload.capabilities && payload.capabilities.quality), '可调节');
@@ -1367,12 +1450,12 @@
           }
 
           if (payload.type === 'auth_error') {
-            if (authToken && pinInput.value.trim()) {
+            if (authToken && normalizedPin()) {
               clearStoredAuthToken();
               socket.send(JSON.stringify({
                 type: 'auth',
                 version: '0.1.0',
-                pin: pinInput.value.trim(),
+                pin: normalizedPin(),
               }));
               updateSessionStatus('令牌失效，回退到 PIN 配对...', true);
               return;
@@ -1385,12 +1468,14 @@
               reconnectingSignal = false;
               reconnectAttempts = 0;
               streamBtn.disabled = true;
+              updateConnectButton(false);
               updateSessionStatus(`令牌失效，请重新输入 PIN: ${payload.reason}`);
               rejectPendingSignalReady(new Error(`auth failed: ${payload.reason}`));
               socket.close();
               return;
             }
             updateSessionStatus(`认证失败: ${payload.reason}`);
+            updateConnectButton(false);
             rejectPendingSignalReady(new Error(`auth failed: ${payload.reason}`));
           }
 
@@ -1457,6 +1542,7 @@
             renderQualityState(payload.quality);
             if (hostInfo) {
               hostInfo.quality = payload.quality;
+              applyStreamState(payload.stream);
               healthEl.textContent = JSON.stringify(hostInfo, null, 2);
             }
             scheduleQualityRenegotiation(payload.quality);
@@ -1483,7 +1569,7 @@
         if (!canReuseToken() && authToken) {
           clearStoredAuthToken();
         }
-        if (pinInput.value.trim() || authMode() === 'none') {
+        if (normalizedPin() || authMode() === 'none') {
           autoReconnectPaused = false;
         }
         if (canReuseToken() && authToken) {
@@ -1502,7 +1588,7 @@
             version: '0.1.0',
           };
           if (authMode() !== 'none') {
-            authPayload.pin = pinInput.value.trim();
+            authPayload.pin = normalizedPin();
           }
           socket.send(JSON.stringify(authPayload));
           updateSessionStatus(authMode() === 'none' ? '无认证模式握手...' : '使用 PIN 发起配对...', true);
@@ -1790,6 +1876,25 @@
         pushInputEvent({ type: 'key', code, pressed });
       }
 
+      function sendTextInput(text) {
+        if (!signalSocket || signalSocket.readyState !== WebSocket.OPEN || !signalReady) {
+          throw new Error('control session not ready');
+        }
+        signalSocket.send(JSON.stringify({
+          type: 'input',
+          seq: ++inputSequence,
+          events: [{ type: 'text', text }],
+        }));
+      }
+
+      function isEditableTarget(target) {
+        if (!target) {
+          return false;
+        }
+        const tagName = target.tagName ? target.tagName.toLowerCase() : '';
+        return tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target.isContentEditable;
+      }
+
       function releasePressedInputs() {
         if (!controlActive) {
           pressedKeys.clear();
@@ -2066,6 +2171,40 @@
         return mapPointerEvent({ clientX, clientY });
       }
 
+      function clampRemoteCursor(point) {
+        const width = hostInfo ? hostInfo.stream.width : 1;
+        const height = hostInfo ? hostInfo.stream.height : 1;
+        return {
+          x: Math.max(0, Math.min(Math.round(point.x), Math.max(width - 1, 0))),
+          y: Math.max(0, Math.min(Math.round(point.y), Math.max(height - 1, 0))),
+        };
+      }
+
+      function ensureRemoteCursor(clientX, clientY) {
+        if (remoteCursor) {
+          return remoteCursor;
+        }
+        const mapped = mapClientPoint(clientX, clientY);
+        remoteCursor = mapped || {
+          x: Math.round((hostInfo ? hostInfo.stream.width : 1) / 2),
+          y: Math.round((hostInfo ? hostInfo.stream.height : 1) / 2),
+        };
+        remoteCursor = clampRemoteCursor(remoteCursor);
+        pushInputEvent({ type: 'mouse_move', x: remoteCursor.x, y: remoteCursor.y });
+        return remoteCursor;
+      }
+
+      function moveRemoteCursorBy(deltaX, deltaY) {
+        if (!remoteCursor) {
+          ensureRemoteCursor(0, 0);
+        }
+        remoteCursor = clampRemoteCursor({
+          x: remoteCursor.x + (deltaX * touchPointerScale),
+          y: remoteCursor.y + (deltaY * touchPointerScale),
+        });
+        pushInputEvent({ type: 'mouse_move', x: remoteCursor.x, y: remoteCursor.y });
+      }
+
       function sendMouseClick(button) {
         sendMouseButton(button, true);
         sendMouseButton(button, false);
@@ -2100,10 +2239,7 @@
           startedAt: Date.now(),
           moved: false,
         };
-        const mapped = mapClientPoint(center.x, center.y);
-        if (mapped) {
-          pushInputEvent({ type: 'mouse_move', x: mapped.x, y: mapped.y });
-        }
+        ensureRemoteCursor(center.x, center.y);
       }
 
       function handleTouchMove(event) {
@@ -2116,15 +2252,15 @@
           return;
         }
         const center = touchCenter(touches);
-        const mapped = mapClientPoint(center.x, center.y);
+        const deltaX = center.x - touchState.lastX;
         const deltaY = center.y - touchState.lastY;
         if (Math.abs(center.x - touchState.startX) > 8 || Math.abs(center.y - touchState.startY) > 8) {
           touchState.moved = true;
         }
         if (touches.length >= 2) {
           pushInputEvent({ type: 'mouse_wheel', delta_y: Math.trunc(deltaY * 4) });
-        } else if (mapped) {
-          pushInputEvent({ type: 'mouse_move', x: mapped.x, y: mapped.y });
+        } else {
+          moveRemoteCursorBy(deltaX, deltaY);
         }
         touchState.lastX = center.x;
         touchState.lastY = center.y;
@@ -2146,9 +2282,14 @@
 
       connectBtn.addEventListener('click', async () => {
         try {
+          if (signalReady || (signalSocket && signalSocket.readyState === WebSocket.OPEN)) {
+            await disconnectSignalSession();
+            return;
+          }
           await openSignalSession();
         } catch (error) {
           updateSessionStatus(String(error));
+          updateConnectButton(false);
           logSignal('connect failed', { error: String(error) });
         }
       });
@@ -2209,6 +2350,7 @@
       resetBtn.addEventListener('click', async () => {
         clearStoredAuthToken();
         autoReconnectPaused = true;
+        await disconnectSignalSession();
         updateControlState(false, '令牌已清除');
         updateSessionStatus('本地令牌已清除');
       });
@@ -2227,6 +2369,21 @@
           text: clipboardText.value,
         }));
         clipboardStatusEl.innerHTML = '<em>正在写入...</em>';
+      });
+
+      remoteTextSendBtn.addEventListener('click', async () => {
+        const text = remoteTextInput.value;
+        if (!text) {
+          remoteTextStatusEl.textContent = '请输入要发送的文字';
+          return;
+        }
+        if (text.length > 500) {
+          remoteTextStatusEl.textContent = '单次最多发送 500 个字符';
+          return;
+        }
+        await openSignalSession();
+        sendTextInput(text);
+        remoteTextStatusEl.innerHTML = `<em>已发送 ${text.length} 个字符</em>`;
       });
 
       function bytesToBase64(bytes) {
@@ -2325,6 +2482,7 @@
           x: mapped.x,
           y: mapped.y,
         });
+        remoteCursor = mapped;
       });
 
       controlSurface.addEventListener('mousedown', (event) => {
@@ -2339,6 +2497,7 @@
             x: mapped.x,
             y: mapped.y,
           });
+          remoteCursor = mapped;
         }
         const button = mapMouseButton(event.button);
         if (!button) {
@@ -2390,7 +2549,7 @@
       }, { passive: false });
 
       window.addEventListener('keydown', (event) => {
-        if (!controlActive || event.target === pinInput) {
+        if (!controlActive || isEditableTarget(event.target)) {
           return;
         }
         event.preventDefault();
@@ -2401,7 +2560,7 @@
       });
 
       window.addEventListener('keyup', (event) => {
-        if (!controlActive || event.target === pinInput) {
+        if (!controlActive || isEditableTarget(event.target)) {
           return;
         }
         event.preventDefault();

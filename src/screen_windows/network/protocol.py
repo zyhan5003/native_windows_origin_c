@@ -155,11 +155,14 @@ def build_file_access(*, ticket: str, expires_in_seconds: int) -> dict[str, Any]
     }
 
 
-def build_quality_state(state: dict[str, Any]) -> dict[str, Any]:
-    return {
+def build_quality_state(state: dict[str, Any], *, stream: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = {
         "type": "quality_state",
         "quality": state,
     }
+    if stream is not None:
+        payload["stream"] = stream
+    return payload
 
 
 def build_quality_error(reason: str) -> dict[str, Any]:

@@ -38,6 +38,9 @@ python -m screen_windows bench-encode
 - 2026-06-27 Chrome MCP：AQE 自动档低 RTT/零丢包保持标准档；手动锁定节能档后 `locked=true/profile=eco`，重协商 SDP `b=AS:2000`，控制台无错误。
 - 2026-06-27 Chrome MCP：`auth.mode="none"` 未输入 PIN 可建立控制会话，能力按钮启用且不依赖 token，控制台无错误。
 - 2026-06-27 Chrome MCP：`auth.mode="always"` 首次 PIN 成功；刷新后无 PIN 连接失败且本地不保存 token，控制台无错误。
+- 2026-06-27 Android 真机：HeyTap Browser + ADB reverse 通过；PIN 限制 6 位、连接按钮切换“断开主机”、WebRTC 预览、触摸板式滑动输入可用，`/api/health.input` 从 `0/0` 增至 `26/26`。
+- 2026-06-27 Android 真机：手机文本输入入口可用，发送 `mobitest` 后 `/api/health.input` 从 `26/26` 增至 `27/27`；Unicode 注入由自动化覆盖。
+- 2026-06-27 真实 Host：手动切换 `1920x1080@30fps/8Mbps` 后，`/api/health.stream` 从 `1280x720@24` 更新为 `1920x1080@30`，`quality_state.stream` 同步返回实际流尺寸。
 
 ## 自动化覆盖
 
@@ -56,6 +59,8 @@ python -m screen_windows bench-encode
 - 2026-06-27：Web UI 远控失焦、鼠标离开或停用控制时会释放已按下的键盘/鼠标状态，降低卡键风险。
 - 2026-06-27：Web UI 控制通道重连会忽略旧 socket 的迟到 close/message，避免旧会话覆盖新预览状态。
 - 2026-06-27：Web UI 在 WebRTC 媒体连接 failed/disconnected 且信令仍可用时会自动重建预览。
+- 2026-06-27：Web UI 支持手机触摸板模式和手机文本输入；单指滑动按增量移动远端鼠标，文本输入走 Win32 Unicode 注入。
+- 2026-06-27：手动画质分辨率会重建 Host 捕获源并同步输入坐标基准，避免 UI 显示 1080p 但实际仍发送 720p 的模糊画面。
 - 2026-06-27 Chrome MCP：Web UI 改为远控驾驶舱布局，健康检查收为摘要；手动自定义 `1600x900@45fps/7.5Mbps` 可生效，控制台无 error/warn/issue。
 - 2026-06-27 Chrome MCP：Web UI 增加停止/重建预览、填充/完整显示和全屏入口；页面加载无 error/warn/issue。
 - 2026-06-27 Chrome MCP：Web UI 改为新手三步连接导向，画质控件补充用途说明，诊断日志默认折叠；桌面/窄屏快照可读，控制台无 error/warn/issue。

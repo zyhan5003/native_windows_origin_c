@@ -13,6 +13,7 @@ INPUT_KEYBOARD = 1
 
 KEYEVENTF_EXTENDEDKEY = 0x0001
 KEYEVENTF_KEYUP = 0x0002
+KEYEVENTF_UNICODE = 0x0004
 KEYEVENTF_SCANCODE = 0x0008
 
 MOUSEEVENTF_MOVE = 0x0001
@@ -187,7 +188,13 @@ class KeyEvent:
     pressed: bool
 
 
-InputEvent = MouseMoveEvent | MouseButtonEvent | MouseWheelEvent | KeyEvent
+@dataclass(frozen=True, slots=True)
+class TextEvent:
+    kind: Literal["text"]
+    text: str
+
+
+InputEvent = MouseMoveEvent | MouseButtonEvent | MouseWheelEvent | KeyEvent | TextEvent
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,6 +214,8 @@ class InputBatch:
 class InputExecutor(Protocol):
     display_width: int
     display_height: int
+    display_physical_width: int
+    display_physical_height: int
     display_left: int
     display_top: int
     virtual_left: int
@@ -222,6 +231,8 @@ class InputExecutor(Protocol):
 class RecordingInputExecutor:
     display_width: int
     display_height: int
+    display_physical_width: int
+    display_physical_height: int
     display_left: int
     display_top: int
     virtual_left: int
@@ -235,6 +246,8 @@ class RecordingInputExecutor:
         display_width: int,
         display_height: int,
         *,
+        display_physical_width: int | None = None,
+        display_physical_height: int | None = None,
         display_left: int = 0,
         display_top: int = 0,
         virtual_left: int = 0,
@@ -244,6 +257,8 @@ class RecordingInputExecutor:
     ) -> None:
         self.display_width = display_width
         self.display_height = display_height
+        self.display_physical_width = display_physical_width or display_width
+        self.display_physical_height = display_physical_height or display_height
         self.display_left = display_left
         self.display_top = display_top
         self.virtual_left = virtual_left
@@ -264,6 +279,8 @@ class WindowsInputExecutor:
         display_width: int,
         display_height: int,
         *,
+        display_physical_width: int | None = None,
+        display_physical_height: int | None = None,
         display_left: int = 0,
         display_top: int = 0,
         virtual_left: int = 0,
@@ -273,6 +290,8 @@ class WindowsInputExecutor:
     ) -> None:
         self.display_width = max(display_width, 1)
         self.display_height = max(display_height, 1)
+        self.display_physical_width = max(display_physical_width or self.display_width, 1)
+        self.display_physical_height = max(display_physical_height or self.display_height, 1)
         self.display_left = display_left
         self.display_top = display_top
         self.virtual_left = virtual_left
@@ -298,6 +317,9 @@ class WindowsInputExecutor:
         if event.kind == "key":
             self._send_key(event.code, event.pressed)
             return
+        if event.kind == "text":
+            self._send_text(event.text)
+            return
         raise ValueError(f"unsupported input event kind: {event.kind}")
 
     def _send_input(self, input_item: INPUT) -> None:
@@ -308,8 +330,10 @@ class WindowsInputExecutor:
     def _send_mouse_move(self, x: int, y: int) -> None:
         local_x = max(0, min(x, self.display_width - 1))
         local_y = max(0, min(y, self.display_height - 1))
-        absolute_x = self.display_left + local_x
-        absolute_y = self.display_top + local_y
+        physical_x = int(round((local_x * max(self.display_physical_width - 1, 1)) / max(self.display_width - 1, 1)))
+        physical_y = int(round((local_y * max(self.display_physical_height - 1, 1)) / max(self.display_height - 1, 1)))
+        absolute_x = self.display_left + physical_x
+        absolute_y = self.display_top + physical_y
         virtual_x = absolute_x - self.virtual_left
         virtual_y = absolute_y - self.virtual_top
         normalized_x = int(round((max(0, min(virtual_x, self.virtual_width - 1)) * 65535) / max(self.virtual_width - 1, 1)))
@@ -394,6 +418,24 @@ class WindowsInputExecutor:
         )
         self._send_input(input_item)
 
+    def _send_text(self, text: str) -> None:
+        # 手机软键盘不会可靠产生桌面键盘码，使用 UTF-16 单元注入覆盖中文等文本输入。
+        encoded = text.encode("utf-16-le", errors="surrogatepass")
+        for offset in range(0, len(encoded), 2):
+            scan_code = int.from_bytes(encoded[offset : offset + 2], "little")
+            for pressed in (True, False):
+                input_item = INPUT(
+                    type=INPUT_KEYBOARD,
+                    ki=KEYBDINPUT(
+                        wVk=0,
+                        wScan=scan_code,
+                        dwFlags=KEYEVENTF_UNICODE | (0 if pressed else KEYEVENTF_KEYUP),
+                        time=0,
+                        dwExtraInfo=0,
+                    ),
+                )
+                self._send_input(input_item)
+
 
 def parse_input_event(payload: dict[str, Any]) -> InputEvent:
     if not isinstance(payload, dict):
@@ -426,4 +468,13 @@ def parse_input_event(payload: dict[str, Any]) -> InputEvent:
             code=str(payload["code"]),
             pressed=bool(payload["pressed"]),
         )
+    if event_type == "text":
+        text = payload.get("text", "")
+        if not isinstance(text, str):
+            raise ValueError("text input event requires string text")
+        if not text:
+            raise ValueError("text input event requires text")
+        if len(text) > 500:
+            raise ValueError("text input event is too long")
+        return TextEvent(kind="text", text=text)
     raise ValueError(f"unsupported input event type: {event_type}")

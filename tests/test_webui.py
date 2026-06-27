@@ -8,7 +8,7 @@ def test_webui_invalid_token_stops_reconnect_until_pin_is_provided() -> None:
     assert "if (autoReconnectPaused) {" in INDEX_HTML
     assert "令牌失效，请重新输入 PIN" in INDEX_HTML
     assert "socket.close();" in INDEX_HTML
-    assert "if (pinInput.value.trim() || authMode() === 'none') {" in INDEX_HTML
+    assert "if (normalizedPin() || authMode() === 'none') {" in INDEX_HTML
 
 
 def test_webui_reuses_single_token_clear_helper() -> None:
@@ -71,6 +71,8 @@ def test_webui_exposes_manual_resolution_fps_and_bitrate_controls() -> None:
     assert "payload.fps = Number(qualityFps.value);" in INDEX_HTML
     assert "payload.bitrate_mbps = Number(qualityBitrate.value);" in INDEX_HTML
     assert "function qualityProfileKey(profile)" in INDEX_HTML
+    assert "function applyStreamState(stream)" in INDEX_HTML
+    assert "applyStreamState(payload.stream)" in INDEX_HTML
 
 
 def test_webui_has_preview_lifecycle_and_view_controls() -> None:
@@ -93,3 +95,31 @@ def test_webui_guides_non_professional_users() -> None:
     assert "3. 启用键鼠控制" in INDEX_HTML
     assert "不确定时保持自动" in INDEX_HTML
     assert "高级诊断日志" in INDEX_HTML
+
+
+def test_webui_connection_button_toggles_disconnect_state() -> None:
+    assert "function updateConnectButton(connected, connecting = false)" in INDEX_HTML
+    assert 'maxlength="6"' in INDEX_HTML
+    assert "function normalizedPin()" in INDEX_HTML
+    assert "connectBtn.textContent = connected ? '断开主机'" in INDEX_HTML
+    assert "async function disconnectSignalSession" in INDEX_HTML
+    assert "await disconnectSignalSession();" in INDEX_HTML
+    assert "updateConnectButton(true);" in INDEX_HTML
+
+
+def test_webui_exposes_mobile_text_input() -> None:
+    assert 'id="remoteTextInput"' in INDEX_HTML
+    assert 'id="remoteTextSendBtn"' in INDEX_HTML
+    assert "function sendTextInput(text)" in INDEX_HTML
+    assert "events: [{ type: 'text', text }]" in INDEX_HTML
+    assert "isEditableTarget(event.target)" in INDEX_HTML
+    assert "单次最多发送 500 个字符" in INDEX_HTML
+
+
+def test_webui_uses_touchpad_style_mobile_control() -> None:
+    assert "let remoteCursor = null;" in INDEX_HTML
+    assert "const touchPointerScale = 1.35;" in INDEX_HTML
+    assert "function moveRemoteCursorBy(deltaX, deltaY)" in INDEX_HTML
+    assert "remoteCursor.x + (deltaX * touchPointerScale)" in INDEX_HTML
+    assert "手机使用触摸板模式" in INDEX_HTML
+    assert "sendMouseClick(touchState.count >= 2 ? 'right' : 'left')" in INDEX_HTML

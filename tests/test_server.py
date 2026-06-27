@@ -960,6 +960,83 @@ async def _test_quality_state_can_be_read_and_locked() -> None:
         await host.shutdown()
 
 
+def test_manual_quality_updates_capture_source_size(monkeypatch) -> None:
+    asyncio.run(_test_manual_quality_updates_capture_source_size(monkeypatch))
+
+
+async def _test_manual_quality_updates_capture_source_size(monkeypatch) -> None:
+    import screen_windows.app.server as server_module
+
+    def fake_enumerate_displays(config: StreamConfig) -> DisplayInfo:
+        return DisplayInfo(
+            selected_monitor=config.monitor,
+            source="test",
+            reason="ok",
+            monitors=[
+                DisplayMonitor(id=0, left=0, top=0, width=1920, height=1080, primary=True),
+            ],
+        )
+
+    def fake_build_frame_source(config: StreamConfig) -> SyntheticFrameSource:
+        return SyntheticFrameSource(width=config.width, height=config.height, fps=config.fps)
+
+    monkeypatch.setattr(server_module, "enumerate_displays", fake_enumerate_displays)
+    monkeypatch.setattr(server_module, "build_frame_source", fake_build_frame_source)
+    executor = RecordingInputExecutor(display_width=1280, display_height=720)
+    host = HostServer(
+        AppConfig(
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
+            stream=StreamConfig(width=1280, height=720, fps=24),
+        ),
+        input_executor=executor,
+        clipboard_service=build_recording_clipboard(),
+    )
+    await host.start()
+    try:
+        async with connect(host.websocket_url()) as ws:
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "auth",
+                        "version": "0.1.0",
+                        "pin": host.token_manager.pin,
+                    }
+                )
+            )
+            auth_message = json.loads(await ws.recv())
+            assert auth_message["type"] == "auth_ok"
+
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "quality",
+                        "mode": "manual",
+                        "profile": "standard",
+                        "width": 1600,
+                        "height": 900,
+                        "fps": 45,
+                        "bitrate_mbps": 7.5,
+                    }
+                )
+            )
+            quality_message = json.loads(await ws.recv())
+
+            assert quality_message["type"] == "quality_state"
+            assert quality_message["stream"]["width"] == 1600
+            assert quality_message["stream"]["height"] == 900
+            assert quality_message["stream"]["fps"] == 45
+            assert host._frame_source.width == 1600
+            assert host._frame_source.height == 900
+            assert host._config.stream.width == 1600
+            assert host._config.stream.height == 900
+            assert executor.display_width == 1600
+            assert executor.display_height == 900
+            assert executor.display_physical_width == 1920
+            assert executor.display_physical_height == 1080
+    finally:
+        await host.shutdown()
+
+
 def test_webrtc_offer_answer_streams_video() -> None:
     asyncio.run(_test_webrtc_offer_answer_streams_video())
 
