@@ -7,11 +7,10 @@
 5. 键盘控制：Chrome 验证字母数字、修饰键、功能键、方向键、小键盘和 PrintScreen/NumLock/ScrollLock。
 6. 服务发现：真实 LAN 下用 `python -m screen_windows discover --method both --json` 验证 UDP/mDNS 可发现，mDNS 目标 <5 秒。
 7. 认证持久化：真实 Chrome 确认主机重启后 token 可复用且无需重新 PIN。
-8. 认证模式：Chrome 验证 `auth.mode = "none"` 无需 PIN，`auth.mode = "always"` 禁止 token 复用。
-9. Stats 长稳：Chrome 确认 WS stats、`/api/health.runtime` 和媒体状态面板的系统/视频/AQE 数据持续一致。
-10. 静态带宽：真实静态桌面确认 `motion_ratio` 接近 0 时 `effective_fps` 降低，实际接收码率同步下降。
-11. 多显示器：真实 Windows 多显示器环境确认 `auth_ok.display_info.monitors` 与 `/api/health.stream.display` 一致。
-12. 显示器切换：真实多屏下 Chrome 调用 `display_switch` 后重启预览，确认画面源和鼠标落点切到目标显示器。
-13. 移动端触控：手机/平板验证单指移动/点击、双指右键、双指滚轮映射到受控端。
-14. 断线重连：Chrome 预览中重启/断开主机，确认 token 自动重连并重建视频预览。
-15. 编码门禁：真实目标机器记录 `python -m screen_windows info --json` 与 `bench-encode` 输出。
+8. Stats 长稳：Chrome 确认 WS stats、`/api/health.runtime` 和媒体状态面板的系统/视频/AQE 数据持续一致。
+9. 静态带宽：真实静态桌面确认 `motion_ratio` 接近 0 时 `effective_fps` 降低，实际接收码率同步下降。
+10. 多显示器：真实 Windows 多显示器环境确认 `auth_ok.display_info.monitors` 与 `/api/health.stream.display` 一致。
+11. 显示器切换：真实多屏下 Chrome 调用 `display_switch` 后重启预览，确认画面源和鼠标落点切到目标显示器。
+12. 移动端触控：手机/平板验证单指移动/点击、双指右键、双指滚轮映射到受控端。
+13. 断线重连：Chrome 预览中重启/断开主机，确认 token 自动重连并重建视频预览。
+14. 编码门禁：真实目标机器记录 `python -m screen_windows info --json` 与 `bench-encode` 输出。
