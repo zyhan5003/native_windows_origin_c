@@ -11,3 +11,5 @@ received_files/
 *.part
 host_config.toml
 tokens.json
+AGENTS.md
+docs/
