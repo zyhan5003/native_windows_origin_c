@@ -50,3 +50,12 @@ def test_webui_ignores_stale_signal_socket_events() -> None:
     assert "stale close ignored" in INDEX_HTML
     assert "stale message ignored" in INDEX_HTML
     assert "if (peerConnection === closingConnection) {" in INDEX_HTML
+
+
+def test_webui_rebuilds_media_when_webrtc_fails() -> None:
+    assert "let mediaReconnectTimer = null;" in INDEX_HTML
+    assert "function scheduleMediaReconnect(reason)" in INDEX_HTML
+    assert "scheduleMediaReconnect(connection.connectionState)" in INDEX_HTML
+    assert "mediaReconnectAttempts += 1;" in INDEX_HTML
+    assert "await startPreview();" in INDEX_HTML
+    assert "clearMediaReconnectTimer();" in INDEX_HTML

@@ -473,6 +473,8 @@ INDEX_HTML = """<!doctype html>
       let pendingRenegotiateProfileKey = null;
       let qualityRenegotiating = false;
       let previousInboundVideoStats = null;
+      let mediaReconnectTimer = null;
+      let mediaReconnectAttempts = 0;
       let controlPingTimer = null;
       let latestControlRttMs = null;
       let statsTimer = null;
@@ -731,6 +733,13 @@ INDEX_HTML = """<!doctype html>
         pendingRenegotiateProfileKey = null;
       }
 
+      function clearMediaReconnectTimer() {
+        if (mediaReconnectTimer !== null) {
+          window.clearTimeout(mediaReconnectTimer);
+          mediaReconnectTimer = null;
+        }
+      }
+
       function stopControlPingReporter() {
         if (controlPingTimer !== null) {
           window.clearInterval(controlPingTimer);
@@ -771,6 +780,7 @@ INDEX_HTML = """<!doctype html>
       async function closeLocalPreviewAfterSignalLoss() {
         stopQualityStatsReporter();
         clearQualityRenegotiateTimer();
+        clearMediaReconnectTimer();
         activeNegotiatedProfileKey = null;
         if (peerConnection) {
           const closingConnection = peerConnection;
@@ -1142,6 +1152,7 @@ INDEX_HTML = """<!doctype html>
           throw new Error('signal socket not ready');
         }
         previewDesired = true;
+        clearMediaReconnectTimer();
         clearQualityRenegotiateTimer();
 
         if (peerConnection) {
@@ -1157,6 +1168,7 @@ INDEX_HTML = """<!doctype html>
           remoteVideo.srcObject = event.streams[0];
           overlayEl.textContent = 'video live';
           controlBtn.disabled = false;
+          mediaReconnectAttempts = 0;
           logMedia('remote track attached', {
             kind: event.track.kind,
             streams: event.streams.length,
@@ -1165,8 +1177,21 @@ INDEX_HTML = """<!doctype html>
 
         connection.addEventListener('connectionstatechange', () => {
           logMedia('connectionstatechange', { state: connection.connectionState });
-          if (['failed', 'closed', 'disconnected'].includes(connection.connectionState)) {
+          if (connection !== peerConnection) {
+            return;
+          }
+          if (['failed', 'disconnected'].includes(connection.connectionState)) {
             stopQualityStatsReporter();
+            scheduleMediaReconnect(connection.connectionState);
+            return;
+          }
+          if (connection.connectionState === 'closed') {
+            stopQualityStatsReporter();
+            return;
+          }
+          if (connection.connectionState === 'connected') {
+            mediaReconnectAttempts = 0;
+            clearMediaReconnectTimer();
           }
         });
 
@@ -1189,6 +1214,31 @@ INDEX_HTML = """<!doctype html>
           iceComplete,
           iceGatheringState: connection.iceGatheringState,
         });
+      }
+
+      function scheduleMediaReconnect(reason) {
+        if (!previewDesired || mediaReconnectTimer !== null || qualityRenegotiating) {
+          return;
+        }
+        if (!signalSocket || signalSocket.readyState !== WebSocket.OPEN || !signalReady) {
+          return;
+        }
+        const delayMs = Math.min(3000, 500 * (2 ** mediaReconnectAttempts));
+        mediaReconnectAttempts += 1;
+        overlayEl.textContent = `video ${reason}, ${delayMs}ms 后重建`;
+        mediaReconnectTimer = window.setTimeout(async () => {
+          mediaReconnectTimer = null;
+          if (!previewDesired || !signalSocket || signalSocket.readyState !== WebSocket.OPEN || !signalReady) {
+            return;
+          }
+          try {
+            logMedia('media reconnect', { reason });
+            await startPreview();
+          } catch (error) {
+            logMedia('media reconnect failed', { error: String(error) });
+            scheduleMediaReconnect('failed');
+          }
+        }, delayMs);
       }
 
       function scheduleQualityRenegotiation(state) {
@@ -1238,6 +1288,7 @@ INDEX_HTML = """<!doctype html>
         previewDesired = false;
         activeNegotiatedProfileKey = null;
         clearQualityRenegotiateTimer();
+        clearMediaReconnectTimer();
         stopQualityStatsReporter();
         updateControlState(false, '显示器已切换，请重新启动视频预览');
         controlBtn.disabled = true;
