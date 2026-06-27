@@ -4,6 +4,16 @@ Windows 优先的局域网远程桌面工具。受控端在 Windows 上运行，
 
 项目目标是局域网内低延迟、可诊断、易部署的远控体验，不面向公网穿透场景。
 
+## English introduction
+
+`screen_windows` is a Windows-first LAN remote desktop tool. The host runs on Windows, while the controller only needs a modern browser on a phone, tablet, or another computer. It focuses on local-network low latency, WebRTC H264 video, browser-based keyboard/mouse control, mobile touchpad interaction, clipboard sync, file transfer, and practical runtime diagnostics.
+
+This project is designed for trusted LAN usage, not public internet exposure or cloud relay scenarios.
+
+## 联系与支持
+
+如有切实帮助，欢迎联系 `664911336@qq.com`；也欢迎联系 `18210409689`，用于支持 agents cost。
+
 ## 当前能力
 
 - 本地启动页：用浏览器选择绑定地址、端口、分辨率、FPS、码率、PIN、捕获源和编码后端后启动 Host。
@@ -149,7 +159,7 @@ python -m screen_windows bench-encode --width 1920 --height 1080 --fps 30 --fram
 pytest -q
 ```
 
-真实交付验收请结合浏览器、手机、局域网、多显示器和长稳性能，细项见 [docs/TODO_TESTS.md](docs/TODO_TESTS.md)。
+真实交付验收建议结合浏览器、手机、局域网、多显示器和长稳性能做小范围验证。
 
 ## 项目结构
 
@@ -164,7 +174,7 @@ src/screen_windows/
   web/        Web UI 资源加载与静态页面
 ```
 
-更多架构约束见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，集中验收记录见 [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
+代码按运行入口、控制能力、媒体链路、网络协议、安全认证、遥测和 Web 资源分层，便于后续按模块维护。
 
 ## 安全说明
 
