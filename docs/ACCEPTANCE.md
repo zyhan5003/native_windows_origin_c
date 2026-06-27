@@ -33,3 +33,4 @@ python -m screen_windows bench-encode
 ## 最近烟测
 
 - 2026-06-27 Chrome MCP：本机 `dxcam` 预览已连通，WebRTC `connected`，视频 `1280x720` live track，控制台无错误。
+- 2026-06-27 Chrome MCP：小文件上传/列表/带票据下载通过，health `completed_files=1`，落盘内容一致，控制台无错误。
