@@ -212,13 +212,16 @@ class WebRtcSession:
         *,
         quality_profile_provider: Callable[[], QualityProfile] | None = None,
         quality_signal_callback: Callable[[QualitySignal], None] | None = None,
+        closed_callback: Callable[["WebRtcSession"], None] | None = None,
     ) -> None:
         self._source = source
         self._quality_profile_provider = quality_profile_provider
         self._quality_signal_callback = quality_signal_callback
+        self._closed_callback = closed_callback
         self._pc = RTCPeerConnection()
         self._video_track: SourceVideoTrack | None = None
         self._closed = False
+        self._notify_on_close = True
 
         @self._pc.on("connectionstatechange")
         async def on_connectionstatechange() -> None:
@@ -280,6 +283,12 @@ class WebRtcSession:
             await self._pc.close()
         except Exception:  # pragma: no cover - 关闭兜底
             LOGGER.exception("failed to close webrtc peer connection")
+        if self._notify_on_close and self._closed_callback is not None:
+            self._closed_callback(self)
+
+    async def close_without_notify(self) -> None:
+        self._notify_on_close = False
+        await self.close()
 
 
 def apply_video_bandwidth_to_sdp(sdp: str, bitrate_mbps: float) -> str:

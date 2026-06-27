@@ -71,6 +71,32 @@ async def _test_health_endpoint_returns_runtime_info() -> None:
         await client.close()
 
 
+def test_closed_webrtc_session_is_removed_from_runtime_stats() -> None:
+    asyncio.run(_test_closed_webrtc_session_is_removed_from_runtime_stats())
+
+
+async def _test_closed_webrtc_session_is_removed_from_runtime_stats() -> None:
+    class FakePeerSession:
+        stats = {"connection_state": "failed", "video": None}
+        closed = False
+
+        async def close_without_notify(self) -> None:
+            self.closed = True
+
+    host = HostServer(AppConfig(), clipboard_service=build_recording_clipboard())
+    peer_session = FakePeerSession()
+    host._peer_sessions.add(peer_session)  # type: ignore[arg-type]
+    host._state.active_webrtc_sessions = 1
+
+    host._schedule_peer_session_cleanup(peer_session)  # type: ignore[arg-type]
+    await asyncio.sleep(0)
+    runtime = host._build_runtime_stats_payload()
+
+    assert peer_session.closed is True
+    assert runtime["active_webrtc_sessions"] == 0
+    assert runtime["webrtc"]["sessions"] == []
+
+
 def test_http_file_list_and_download(tmp_path) -> None:
     asyncio.run(_test_http_file_list_and_download(tmp_path))
 

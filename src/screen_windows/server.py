@@ -424,6 +424,7 @@ class HostServer:
                 self._frame_source,
                 quality_profile_provider=lambda: self._quality_controller.state.profile,
                 quality_signal_callback=lambda signal: self._quality_controller.update(signal),
+                closed_callback=self._schedule_peer_session_cleanup,
             )
             self._peer_sessions.add(session.peer_session)
             self._state.active_webrtc_sessions = len(self._peer_sessions)
@@ -727,7 +728,11 @@ class HostServer:
         if peer_session in self._peer_sessions:
             self._peer_sessions.remove(peer_session)
         self._state.active_webrtc_sessions = len(self._peer_sessions)
-        await peer_session.close()
+        await peer_session.close_without_notify()
+
+    def _schedule_peer_session_cleanup(self, peer_session: WebRtcSession) -> None:
+        # aiortc 可能因网络断开自行进入 failed/closed，必须同步清理 Host 侧统计。
+        asyncio.create_task(self._close_peer_session(peer_session))
 
     async def start(self) -> None:
         self._web_runner = web.AppRunner(self._app)
