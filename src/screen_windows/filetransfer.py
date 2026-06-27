@@ -9,6 +9,14 @@ from typing import Any
 
 DEFAULT_CHUNK_SIZE = 64 * 1024
 DEFAULT_MAX_FILE_SIZE = 512 * 1024 * 1024
+WINDOWS_RESERVED_NAMES = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+}
 
 
 class FileTransferError(ValueError):
@@ -79,6 +87,7 @@ class FileTransferService:
         )
         if part_path.exists():
             part_path.unlink()
+        part_path.touch()
         self._active[transfer_id] = transfer
         return transfer
 
@@ -161,8 +170,12 @@ class FileTransferService:
 
         stem = candidate.stem
         suffix = candidate.suffix
-        fallback = self.receive_dir / f"{stem}-{transfer_id}{suffix}"
-        return ensure_within_directory(self.receive_dir, fallback)
+        suffix_index = 1
+        while True:
+            fallback = self.receive_dir / f"{stem}-{transfer_id}-{suffix_index}{suffix}"
+            if not fallback.exists() and not fallback.with_name(f"{fallback.name}.part").exists():
+                return ensure_within_directory(self.receive_dir, fallback)
+            suffix_index += 1
 
 
 def sanitize_filename(name: str) -> str:
@@ -173,6 +186,9 @@ def sanitize_filename(name: str) -> str:
     cleaned = cleaned.rstrip(" .")
     if not cleaned:
         raise FileTransferError("invalid file name")
+    # Windows 设备保留名带扩展名也非法，例如 CON.txt。
+    if Path(cleaned).stem.upper() in WINDOWS_RESERVED_NAMES:
+        cleaned = f"_{cleaned}"
     return cleaned[:160]
 
 

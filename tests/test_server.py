@@ -633,6 +633,67 @@ async def _test_file_upload_chunks_are_written_and_acknowledged(tmp_path) -> Non
         await host.shutdown()
 
 
+def test_file_upload_zero_byte_file_completes_without_chunks(tmp_path) -> None:
+    asyncio.run(_test_file_upload_zero_byte_file_completes_without_chunks(tmp_path))
+
+
+async def _test_file_upload_zero_byte_file_completes_without_chunks(tmp_path) -> None:
+    file_transfer = build_file_transfer(tmp_path)
+    host = HostServer(
+        AppConfig(
+            server=ServerConfig(bind="127.0.0.1", port=19665, http_port=19666),
+        ),
+        clipboard_service=build_recording_clipboard(),
+        file_transfer_service=file_transfer,
+    )
+    await host.start()
+    try:
+        async with connect("ws://127.0.0.1:19665") as ws:
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "auth",
+                        "version": "0.1.0",
+                        "pin": host.token_manager.pin,
+                    }
+                )
+            )
+            auth_message = json.loads(await ws.recv())
+            assert auth_message["type"] == "auth_ok"
+
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "file_req",
+                        "id": "empty-file",
+                        "action": "send",
+                        "name": "empty.txt",
+                        "size": 0,
+                    }
+                )
+            )
+            ready = json.loads(await ws.recv())
+            assert ready == {"type": "file_ready", "id": "empty-file", "offset": 0}
+
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "file_req",
+                        "id": "empty-file",
+                        "action": "complete",
+                    }
+                )
+            )
+            complete = json.loads(await ws.recv())
+            assert complete["type"] == "file_complete"
+            assert complete["name"] == "empty.txt"
+            assert complete["size"] == 0
+            assert (tmp_path / "empty.txt").read_bytes() == b""
+            assert not list(tmp_path.glob("*.part"))
+    finally:
+        await host.shutdown()
+
+
 def test_file_upload_partial_is_canceled_on_disconnect(tmp_path) -> None:
     asyncio.run(_test_file_upload_partial_is_canceled_on_disconnect(tmp_path))
 

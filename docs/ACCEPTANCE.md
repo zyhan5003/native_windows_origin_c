@@ -36,3 +36,7 @@ python -m screen_windows bench-encode
 - 2026-06-27 Chrome MCP：小文件上传/列表/带票据下载通过，health `completed_files=1`，落盘内容一致，控制台无错误。
 - 2026-06-27 Chrome MCP：文本剪贴板双向读写通过，Win32 内容一致，health `reads=1/writes=1`，控制台无错误。
 - 2026-06-27 Chrome MCP：AQE 自动档低 RTT/零丢包保持标准档；手动锁定节能档后 `locked=true/profile=eco`，重协商 SDP `b=AS:2000`，控制台无错误。
+
+## 自动化覆盖
+
+- 2026-06-27：文件传输覆盖零字节、错误 offset、超限、非法/保留名、重名、`.part` 过滤和断连清理。

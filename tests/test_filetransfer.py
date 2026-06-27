@@ -44,6 +44,31 @@ def test_file_transfer_writes_chunks_and_completes(tmp_path) -> None:
     assert service.active_count == 0
 
 
+def test_file_transfer_completes_zero_byte_file(tmp_path) -> None:
+    service = FileTransferService(receive_dir=tmp_path)
+
+    transfer = service.start_upload(transfer_id="empty", name="empty.txt", size=0)
+    completed = service.complete_upload(transfer_id="empty")
+
+    assert completed is transfer
+    assert completed.target_path.read_bytes() == b""
+    assert not completed.part_path.exists()
+    assert service.completed_files == 1
+    assert service.completed_bytes == 0
+
+
+def test_file_transfer_generates_unique_name_when_target_and_fallback_exist(tmp_path) -> None:
+    service = FileTransferService(receive_dir=tmp_path)
+    (tmp_path / "note.txt").write_text("old", encoding="utf-8")
+    (tmp_path / "note-abc-1.txt").write_text("older", encoding="utf-8")
+
+    transfer = service.start_upload(transfer_id="abc", name="note.txt", size=1)
+
+    assert transfer.safe_name == "note.txt"
+    assert transfer.target_path.name == "note-abc-2.txt"
+    assert transfer.part_path.name == "note-abc-2.txt.part"
+
+
 def test_file_transfer_rejects_unexpected_offset(tmp_path) -> None:
     service = FileTransferService(receive_dir=tmp_path)
     service.start_upload(transfer_id="abc", name="a.txt", size=3)
@@ -94,3 +119,8 @@ def test_file_transfer_lists_and_resolves_completed_files(tmp_path) -> None:
 
 def test_sanitize_filename_removes_path_and_forbidden_chars() -> None:
     assert sanitize_filename("..\\bad:name?.txt") == "bad_name_.txt"
+
+
+def test_sanitize_filename_avoids_windows_reserved_names() -> None:
+    assert sanitize_filename("CON.txt") == "_CON.txt"
+    assert sanitize_filename("lpt1") == "_lpt1"
