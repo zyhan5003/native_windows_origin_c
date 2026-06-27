@@ -10,28 +10,29 @@ INDEX_HTML = """<!doctype html>
     <style>
       :root {
         color-scheme: light;
-        --bg-1: #081018;
-        --bg-2: #101d29;
-        --panel: rgba(9, 18, 27, 0.78);
-        --panel-strong: rgba(5, 11, 17, 0.92);
-        --panel-soft: rgba(255, 255, 255, 0.07);
-        --text: #f5efe3;
-        --muted: #a4b5bf;
-        --accent: #5ff0c8;
-        --accent-2: #ffb44a;
-        --danger: #ff6d5e;
+        --bg-1: #071015;
+        --bg-2: #16251f;
+        --panel: rgba(10, 19, 22, 0.82);
+        --panel-strong: rgba(4, 11, 14, 0.94);
+        --panel-soft: rgba(255, 255, 255, 0.06);
+        --text: #f4efe4;
+        --muted: #aab7ad;
+        --accent: #b6f09c;
+        --accent-2: #f4b45f;
+        --danger: #ff7568;
         --border: rgba(255, 255, 255, 0.13);
-        --line: rgba(95, 240, 200, 0.28);
+        --line: rgba(182, 240, 156, 0.18);
+        --shadow: rgba(0, 0, 0, 0.38);
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "DIN Alternate", "Bahnschrift", "Microsoft YaHei", sans-serif;
+        font-family: "Aptos Display", "Bahnschrift", "Microsoft YaHei", sans-serif;
         background:
-          radial-gradient(circle at 16% 12%, rgba(95, 240, 200, 0.22) 0, transparent 28%),
-          radial-gradient(circle at 84% 8%, rgba(255, 180, 74, 0.18) 0, transparent 24%),
-          linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 58%, #05090d 100%);
+          radial-gradient(circle at 14% 10%, rgba(182, 240, 156, 0.22) 0, transparent 26%),
+          radial-gradient(circle at 88% 4%, rgba(244, 180, 95, 0.18) 0, transparent 22%),
+          linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 55%, #060907 100%);
         color: var(--text);
         overflow-x: hidden;
       }
@@ -43,9 +44,9 @@ INDEX_HTML = """<!doctype html>
         background:
           linear-gradient(var(--line) 1px, transparent 1px),
           linear-gradient(90deg, var(--line) 1px, transparent 1px);
-        background-size: 74px 74px;
+        background-size: 84px 84px;
         mask-image: radial-gradient(circle at 50% 20%, black, transparent 72%);
-        opacity: 0.22;
+        opacity: 0.28;
       }
       .app {
         width: min(1380px, calc(100vw - 28px));
@@ -56,7 +57,7 @@ INDEX_HTML = """<!doctype html>
       }
       .hero {
         display: grid;
-        grid-template-columns: minmax(0, 0.92fr) minmax(380px, 0.58fr);
+        grid-template-columns: minmax(0, 0.95fr) minmax(390px, 0.62fr);
         gap: 18px;
       }
       .panel {
@@ -64,7 +65,7 @@ INDEX_HTML = """<!doctype html>
         border: 1px solid var(--border);
         border-radius: 28px;
         padding: 22px;
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+        box-shadow: 0 24px 80px var(--shadow);
         backdrop-filter: blur(22px);
         position: relative;
         overflow: hidden;
@@ -79,10 +80,10 @@ INDEX_HTML = """<!doctype html>
       }
       h1 {
         margin: 0 0 10px;
-        font-size: clamp(34px, 4.6vw, 76px);
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        line-height: 0.92;
+        max-width: 760px;
+        font-size: clamp(36px, 4.2vw, 68px);
+        letter-spacing: -0.04em;
+        line-height: 0.98;
       }
       p {
         margin: 0 0 16px;
@@ -90,6 +91,9 @@ INDEX_HTML = """<!doctype html>
         line-height: 1.6;
       }
       .badge {
+        width: fit-content;
+        align-self: start;
+        justify-self: start;
         display: inline-flex;
         align-items: center;
         gap: 10px;
@@ -113,40 +117,105 @@ INDEX_HTML = """<!doctype html>
         display: grid;
         gap: 18px;
       }
-      .metrics {
+      .lead {
+        max-width: 820px;
+        font-size: 16px;
+      }
+      .section-head {
+        display: grid;
+        gap: 5px;
+        position: relative;
+        z-index: 1;
+      }
+      .section-head strong {
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+      .section-head span,
+      .hint,
+      .field-hint {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .quick-guide {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
       }
-      .metric {
-        padding: 14px 16px;
+      .guide-step {
+        min-height: 138px;
+        padding: 16px;
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.05);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
         border: 1px solid rgba(255, 255, 255, 0.08);
       }
-      .metric strong {
+      .step-number {
+        width: 30px;
+        height: 30px;
+        display: inline-grid;
+        place-items: center;
+        border-radius: 11px;
+        background: rgba(182, 240, 156, 0.14);
+        border: 1px solid rgba(182, 240, 156, 0.28);
+        color: var(--accent);
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+      .guide-step strong {
         display: block;
-        font-size: 22px;
+        font-size: 16px;
         margin-bottom: 6px;
       }
-      .metric span {
+      .guide-step span {
         color: var(--muted);
         font-size: 12px;
+        line-height: 1.55;
+      }
+      .capability-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .capability {
+        width: fit-content;
+        min-height: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 11px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #f8f3ea;
+        font-size: 12px;
+      }
+      .capability::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--accent-2);
       }
       .controls {
         display: grid;
         gap: 12px;
         align-content: start;
       }
+      .connection-panel {
+        background:
+          linear-gradient(160deg, rgba(182, 240, 156, 0.12), transparent 32%),
+          rgba(8, 16, 18, 0.86);
+      }
       .field {
         display: grid;
         gap: 8px;
       }
       .field label {
-        color: var(--muted);
+        color: #e4eadf;
         font-size: 12px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
       .field input,
       .field textarea,
@@ -169,14 +238,21 @@ INDEX_HTML = """<!doctype html>
         line-height: 1.45;
       }
       .field input:focus,
-      .field textarea:focus {
-        border-color: rgba(136, 240, 109, 0.7);
-        box-shadow: 0 0 0 4px rgba(136, 240, 109, 0.12);
+      .field textarea:focus,
+      .field select:focus {
+        border-color: rgba(182, 240, 156, 0.7);
+        box-shadow: 0 0 0 4px rgba(182, 240, 156, 0.12);
       }
       .actions {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
+      }
+      .primary-actions button {
+        flex: 1 1 170px;
+      }
+      .utility-actions {
+        gap: 8px;
       }
       .stack {
         display: grid;
@@ -203,8 +279,7 @@ INDEX_HTML = """<!doctype html>
       }
       .stage-title strong {
         font-size: 18px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        letter-spacing: -0.01em;
       }
       .stage-title span {
         color: var(--muted);
@@ -218,7 +293,6 @@ INDEX_HTML = """<!doctype html>
         padding: 8px 12px;
         font-size: 12px;
         letter-spacing: 0.08em;
-        text-transform: uppercase;
       }
       .file-list {
         display: grid;
@@ -257,7 +331,7 @@ INDEX_HTML = """<!doctype html>
         padding: 13px 18px;
         font: inherit;
         cursor: pointer;
-        transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+        transition: transform 160ms ease, opacity 160ms ease, background 160ms ease, border-color 160ms ease;
       }
       button:hover {
         transform: translateY(-1px);
@@ -271,11 +345,22 @@ INDEX_HTML = """<!doctype html>
         background: linear-gradient(120deg, var(--accent), #e2ffd5);
         color: #03110e;
         font-weight: 700;
+        box-shadow: 0 14px 34px rgba(182, 240, 156, 0.2);
       }
       .secondary {
         background: rgba(255, 255, 255, 0.08);
         color: var(--text);
         border: 1px solid var(--border);
+      }
+      .ghost {
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+      }
+      .danger {
+        background: rgba(255, 117, 104, 0.1);
+        color: #ffd5cf;
+        border: 1px solid rgba(255, 117, 104, 0.24);
       }
       .workspace {
         display: grid;
@@ -285,7 +370,7 @@ INDEX_HTML = """<!doctype html>
       .video-shell {
         position: relative;
         overflow: hidden;
-        min-height: 620px;
+        min-height: 600px;
         background:
           linear-gradient(180deg, rgba(95, 240, 200, 0.12), transparent 32%),
           var(--panel-strong);
@@ -331,7 +416,6 @@ INDEX_HTML = """<!doctype html>
         color: #f4f8fb;
         font-size: 12px;
         letter-spacing: 0.06em;
-        text-transform: uppercase;
       }
       .status-list {
         display: grid;
@@ -348,10 +432,12 @@ INDEX_HTML = """<!doctype html>
       }
       .status-card strong {
         display: block;
-        margin-bottom: 8px;
+        margin-bottom: 5px;
         font-size: 13px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+      .status-card .hint {
+        margin: 0 0 12px;
       }
       code, pre {
         display: block;
@@ -373,8 +459,17 @@ INDEX_HTML = """<!doctype html>
         cursor: pointer;
         color: var(--muted);
         font-size: 12px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+      .diagnostic-details {
+        display: grid;
+        gap: 10px;
+      }
+      .diagnostic-details summary {
+        cursor: pointer;
+        color: #eef5e8;
+        font-size: 13px;
+        font-weight: 700;
       }
       .health-summary {
         display: grid;
@@ -413,7 +508,7 @@ INDEX_HTML = """<!doctype html>
         .workspace {
           grid-template-columns: 1fr;
         }
-        .metrics {
+        .quick-guide {
           grid-template-columns: 1fr;
         }
         .quality-grid {
@@ -431,49 +526,68 @@ INDEX_HTML = """<!doctype html>
         <section class="panel hero-copy">
           <span class="badge"><span class="accent-dot"></span>screen_windows host</span>
           <div>
-            <h1>Remote Flight Deck</h1>
-            <p>面向局域网远控的浏览器驾驶舱：先配对，再启动低延迟预览，随后按网络情况切换分辨率、帧率和码率。底层走 WebSocket 控制与 WebRTC 视频双通道。</p>
+            <h1>远程控制台</h1>
+            <p class="lead">这是用浏览器控制这台 Windows 主机的入口。普通使用只需要按下面三步走；分辨率、帧率、码率这些高级选项已经放在右侧画质区，默认保持自动即可。</p>
           </div>
-          <div class="metrics">
-            <div class="metric">
-              <strong>60FPS</strong>
-              <span>手动高速档可锁定</span>
+          <div class="quick-guide" aria-label="三步开始">
+            <div class="guide-step">
+              <span class="step-number">1</span>
+              <strong>连接主机</strong>
+              <span>首次连接输入 PIN；通过后浏览器会保存令牌，下次可自动恢复。</span>
             </div>
-            <div class="metric">
-              <strong>1080p</strong>
-              <span>分辨率可显式选择</span>
+            <div class="guide-step">
+              <span class="step-number">2</span>
+              <strong>启动画面</strong>
+              <span>先打开视频预览，确认看到桌面后再进行键鼠控制。</span>
             </div>
-            <div class="metric">
-              <strong>Token</strong>
-              <span>断线后自动恢复会话</span>
+            <div class="guide-step">
+              <span class="step-number">3</span>
+              <strong>启用键鼠</strong>
+              <span>需要操作远端时再开启；点进画面后键盘和鼠标才会发送到主机。</span>
             </div>
+          </div>
+          <div class="capability-row" aria-label="核心能力">
+            <span class="capability">WebRTC 低延迟画面</span>
+            <span class="capability">剪贴板同步</span>
+            <span class="capability">文件传输</span>
+            <span class="capability">自动画质调节</span>
           </div>
         </section>
 
-        <section class="panel controls">
-          <div class="field">
-            <label for="pin">Pairing PIN</label>
-            <input id="pin" inputmode="numeric" placeholder="首次连接输入 6 位 PIN" />
+        <section class="panel controls connection-panel">
+          <div class="section-head">
+            <strong>连接与安全</strong>
+            <span>从这里开始。若主机配置为免认证，可以直接点连接。</span>
           </div>
-          <div class="actions">
-            <button id="connectBtn" class="primary">建立控制会话</button>
-            <button id="streamBtn" class="secondary" disabled>启动视频预览</button>
-            <button id="controlBtn" class="secondary" disabled>启用远程控制</button>
-            <button id="resetBtn" class="secondary">清除本地令牌</button>
+          <div class="field">
+            <label for="pin">配对 PIN</label>
+            <input id="pin" inputmode="numeric" autocomplete="one-time-code" placeholder="首次连接输入主机显示的 6 位 PIN" />
+            <span class="field-hint">PIN 只用于配对；令牌失效或每次询问模式下会再次需要。</span>
+          </div>
+          <div class="actions primary-actions">
+            <button id="connectBtn" class="primary">1. 连接主机</button>
+            <button id="streamBtn" class="secondary" disabled>2. 启动画面预览</button>
+            <button id="controlBtn" class="secondary" disabled>3. 启用键鼠控制</button>
+          </div>
+          <div class="actions utility-actions">
+            <button id="resetBtn" class="danger">忘记这台设备</button>
           </div>
           <div class="status-card">
-            <strong>会话状态</strong>
+            <strong>连接状态</strong>
+            <p class="hint">确认 WebSocket 控制通道是否已经认证。</p>
             <div id="sessionStatus" class="status-line">等待连接</div>
           </div>
           <div class="status-card">
-            <strong>控制状态</strong>
+            <strong>键鼠状态</strong>
+            <p class="hint">只有启用后，点击画面才会把输入发送到主机。</p>
             <div id="controlStatus" class="status-line">未启用</div>
           </div>
           <div class="status-card">
-            <strong>健康检查</strong>
+            <strong>主机概况</strong>
+            <p class="hint">给普通用户看的简表；完整 JSON 放在下面折叠区。</p>
             <div id="healthSummary" class="health-summary"></div>
             <details class="debug-details">
-              <summary>查看原始 JSON</summary>
+              <summary>查看诊断 JSON</summary>
               <code id="health">loading...</code>
             </details>
           </div>
@@ -484,39 +598,45 @@ INDEX_HTML = """<!doctype html>
         <section class="panel video-shell">
           <div class="stage-toolbar">
             <div class="stage-title">
-              <strong>Live Desktop</strong>
-              <span>点击画面后启用远控；失焦会自动释放按键。</span>
+              <strong>远程桌面画面</strong>
+              <span>先启动预览。需要控制时点“启用键鼠控制”，离开页面会自动释放按键。</span>
             </div>
-            <div class="actions">
-              <button id="rebuildPreviewBtn" class="secondary" disabled>重建预览</button>
-              <button id="fitModeBtn" class="secondary">填充画面</button>
+            <div class="actions utility-actions">
+              <button id="rebuildPreviewBtn" class="secondary" disabled>画面异常时重连</button>
+              <button id="fitModeBtn" class="ghost">填充画面</button>
               <button id="fullscreenBtn" class="secondary">全屏</button>
-              <div id="stageStatus" class="status-pill">idle</div>
+              <div id="stageStatus" class="status-pill">待机</div>
             </div>
           </div>
           <div id="controlSurface" class="video-stage" tabindex="0">
             <video id="remoteVideo" autoplay playsinline muted></video>
-            <div class="overlay" id="videoOverlay">signal idle</div>
+            <div class="overlay" id="videoOverlay">等待连接</div>
           </div>
         </section>
 
         <section class="panel status-list">
+          <div class="section-head">
+            <strong>常用工具与画质</strong>
+            <span>日常只看这里。看不清就调高分辨率，卡顿就降帧率或码率；不确定时保持自动。</span>
+          </div>
           <div class="status-card">
             <strong>剪贴板</strong>
+            <p class="hint">在浏览器和远端 Windows 之间读写文本剪贴板。</p>
             <div class="field">
-              <label for="clipboardText">Text</label>
+              <label for="clipboardText">文本内容</label>
               <textarea id="clipboardText" placeholder="文本剪贴板内容"></textarea>
             </div>
             <div class="actions">
-              <button id="clipboardReadBtn" class="secondary" disabled>读取主机</button>
-              <button id="clipboardWriteBtn" class="secondary" disabled>写入主机</button>
+              <button id="clipboardReadBtn" class="secondary" disabled>从主机读取</button>
+              <button id="clipboardWriteBtn" class="secondary" disabled>写入到主机</button>
             </div>
             <div id="clipboardStatus" class="status-line">等待认证</div>
           </div>
           <div class="status-card">
             <strong>文件传输</strong>
+            <p class="hint">上传文件到主机，也可以刷新列表下载主机暴露的文件。</p>
             <div class="field">
-              <label for="fileInput">Upload</label>
+              <label for="fileInput">选择要上传的文件</label>
               <input id="fileInput" type="file" />
             </div>
             <div class="actions">
@@ -528,16 +648,18 @@ INDEX_HTML = """<!doctype html>
           </div>
           <div class="status-card">
             <strong>自适应质量</strong>
+            <p class="hint">自动调节适合大多数局域网；手动锁定用于明确想要某个分辨率、帧率或码率。</p>
             <div class="quality-grid">
               <div class="field">
-                <label for="qualityMode">Mode</label>
+                <label for="qualityMode">调节方式</label>
                 <select id="qualityMode">
                   <option value="auto">自动调节</option>
                   <option value="manual">手动锁定</option>
                 </select>
+                <span class="field-hint">推荐保持自动，网络抖动时会主动降档。</span>
               </div>
               <div class="field">
-                <label for="qualityProfile">Preset</label>
+                <label for="qualityProfile">画质预设</label>
                 <select id="qualityProfile">
                   <option value="turbo">极速 1080p60 / 20M</option>
                   <option value="fast">高速 1080p60 / 10M</option>
@@ -546,9 +668,10 @@ INDEX_HTML = """<!doctype html>
                   <option value="limit">极限 720p15 / 0.5M</option>
                   <option value="custom">自定义</option>
                 </select>
+                <span class="field-hint">预设会同时调整分辨率、帧率和码率。</span>
               </div>
               <div class="field">
-                <label for="qualityResolution">Resolution</label>
+                <label for="qualityResolution">分辨率</label>
                 <select id="qualityResolution">
                   <option value="1920x1080">1920 x 1080</option>
                   <option value="1600x900">1600 x 900</option>
@@ -556,19 +679,22 @@ INDEX_HTML = """<!doctype html>
                   <option value="1280x720">1280 x 720</option>
                   <option value="1024x576">1024 x 576</option>
                 </select>
+                <span class="field-hint">越高越清晰，也更吃带宽和解码性能。</span>
               </div>
               <div class="field">
-                <label for="qualityFps">FPS</label>
+                <label for="qualityFps">帧率</label>
                 <select id="qualityFps">
                   <option value="60">60</option>
                   <option value="45">45</option>
                   <option value="30" selected>30</option>
                   <option value="15">15</option>
                 </select>
+                <span class="field-hint">60 更顺滑；30 更稳；15 适合弱网。</span>
               </div>
               <div class="field wide">
-                <label for="qualityBitrate">Bitrate Mbps</label>
+                <label for="qualityBitrate">码率 Mbps</label>
                 <input id="qualityBitrate" type="number" min="0.1" max="100" step="0.1" value="5" />
+                <span class="field-hint">码率越高画质越稳，但弱网更容易卡。</span>
               </div>
             </div>
             <div class="actions">
@@ -578,8 +704,9 @@ INDEX_HTML = """<!doctype html>
           </div>
           <div class="status-card">
             <strong>显示器</strong>
+            <p class="hint">多屏主机可切换要看的屏幕。</p>
             <div class="field">
-              <label for="displaySelect">Monitor</label>
+              <label for="displaySelect">目标屏幕</label>
               <select id="displaySelect"></select>
             </div>
             <div class="actions">
@@ -589,16 +716,17 @@ INDEX_HTML = """<!doctype html>
           </div>
           <div class="status-card">
             <strong>性能面板</strong>
+            <p class="hint">用于确认当前画质、实际 FPS、CPU 和内存。</p>
             <div id="mediaStats" class="status-line">等待视频 stats</div>
           </div>
-          <div class="status-card">
+          <details class="status-card diagnostic-details">
+            <summary>高级诊断日志</summary>
+            <p class="hint">排查连接或视频异常时再看，普通使用不需要理解这些内容。</p>
             <strong>信令日志</strong>
             <pre id="signalLog">尚未建立连接。</pre>
-          </div>
-          <div class="status-card">
             <strong>媒体状态</strong>
             <pre id="mediaLog">尚未开始会话。</pre>
-          </div>
+          </details>
         </section>
       </section>
     </main>
@@ -720,7 +848,7 @@ INDEX_HTML = """<!doctype html>
         }
         controlActive = active;
         controlSurface.classList.toggle('control-armed', active);
-        controlBtn.textContent = active ? '停止远程控制' : '启用远程控制';
+        controlBtn.textContent = active ? '停止键鼠控制' : '3. 启用键鼠控制';
         controlStatusEl.innerHTML = active ? `<em>${message}</em>` : message;
         if (active) {
           controlSurface.focus();
@@ -729,7 +857,7 @@ INDEX_HTML = """<!doctype html>
 
       function updatePreviewControls(active, message) {
         previewActive = active;
-        streamBtn.textContent = active ? '停止视频预览' : '启动视频预览';
+        streamBtn.textContent = active ? '停止画面预览' : '2. 启动画面预览';
         rebuildPreviewBtn.disabled = !signalReady;
         if (!active) {
           controlBtn.disabled = true;
@@ -879,7 +1007,7 @@ INDEX_HTML = """<!doctype html>
         displayStatusEl.innerHTML = enabled ? `<em>${message}</em>` : message;
       }
 
-      function renderDisplayInfo(displayInfo) {
+      function renderDisplayInfo(displayInfo, enabled = signalReady) {
         if (!displayInfo || !Array.isArray(displayInfo.monitors)) {
           return;
         }
@@ -891,7 +1019,7 @@ INDEX_HTML = """<!doctype html>
           displaySelect.appendChild(option);
         });
         displaySelect.value = String(displayInfo.selected_monitor || 0);
-        updateDisplayControls(true, `当前显示器 #${displaySelect.value}`);
+        updateDisplayControls(enabled, enabled ? `当前显示器 #${displaySelect.value}` : '等待认证');
       }
 
       function renderQualityState(state) {
@@ -913,7 +1041,9 @@ INDEX_HTML = """<!doctype html>
         qualityBitrate.value = String(profile.bitrate_mbps);
         const pending = state.pending_profile ? `，候选 ${state.pending_profile.name}` : '';
         qualityStatusEl.innerHTML = `<em>${profile.name} ${profile.width}x${profile.height} @ ${profile.fps}fps / ${profile.bitrate_mbps}Mbps${pending}</em>`;
-        setStageStatus(`${profile.width}x${profile.height} · ${profile.fps}fps`);
+        if (previewDesired || previewActive) {
+          setStageStatus(`${profile.width}x${profile.height} · ${profile.fps}fps`);
+        }
       }
 
       function applyQualityPresetToControls() {
@@ -1040,7 +1170,7 @@ INDEX_HTML = """<!doctype html>
         clearQualityRenegotiateTimer();
         clearMediaReconnectTimer();
         activeNegotiatedProfileKey = null;
-        updatePreviewControls(false, 'signal lost');
+        updatePreviewControls(false, '控制通道已断开');
         if (peerConnection) {
           const closingConnection = peerConnection;
           await closingConnection.close();
@@ -1078,7 +1208,7 @@ INDEX_HTML = """<!doctype html>
         healthEl.textContent = JSON.stringify(hostInfo, null, 2);
         renderHealthSummary(hostInfo);
         overlayEl.textContent = `${hostInfo.stream.source} | ${hostInfo.stream.width}x${hostInfo.stream.height} @ ${hostInfo.stream.fps}fps`;
-        setStageStatus('health ready');
+        setStageStatus('主机可用');
         renderQualityState(hostInfo.quality);
         renderDisplayInfo(hostInfo.stream && hostInfo.stream.display);
       }
@@ -1177,8 +1307,8 @@ INDEX_HTML = """<!doctype html>
           updateDisplayControls(false, '连接关闭');
           updateControlState(false, '连接关闭');
           updateSessionStatus('控制会话已关闭');
-          overlayEl.textContent = 'signal closed';
-          setStageStatus('signal closed');
+          overlayEl.textContent = '控制通道已关闭';
+          setStageStatus('连接关闭');
           // 控制通道断开时服务端会释放旧 WebRTC 会话；本地先关旧预览，重连后再重建。
           closeLocalPreviewAfterSignalLoss().catch((error) => {
             logMedia('preview close failed after signal loss', { error: String(error) });
@@ -1203,11 +1333,11 @@ INDEX_HTML = """<!doctype html>
             updateFileControls(Boolean(payload.capabilities && payload.capabilities.file_transfer), '可上传');
             updateFileTransferLimits(payload.file_transfer);
             updateQualityControls(Boolean(payload.capabilities && payload.capabilities.quality), '可调节');
-            renderDisplayInfo(payload.display_info);
+            renderDisplayInfo(payload.display_info, true);
             updateSessionStatus('控制会话已认证', true);
-            overlayEl.textContent = 'signal ready';
-            setStageStatus('signal ready');
-            updatePreviewControls(previewActive, previewActive ? 'video live' : 'signal ready');
+            overlayEl.textContent = '控制通道已就绪';
+            setStageStatus('已连接');
+            updatePreviewControls(previewActive, previewActive ? '画面已连接' : '已连接');
             startControlPingReporter();
             startStatsReporter();
             requestQualityState();
@@ -1426,13 +1556,13 @@ INDEX_HTML = """<!doctype html>
 
         peerConnection = new RTCPeerConnection({ iceServers: [] });
         const connection = peerConnection;
-        updatePreviewControls(true, 'negotiating');
+        updatePreviewControls(true, '正在协商');
         connection.addTransceiver('video', { direction: 'recvonly' });
 
         connection.addEventListener('track', (event) => {
           remoteVideo.srcObject = event.streams[0];
-          overlayEl.textContent = 'video live';
-          updatePreviewControls(true, 'video live');
+          overlayEl.textContent = '画面已连接';
+          updatePreviewControls(true, '画面已连接');
           controlBtn.disabled = false;
           mediaReconnectAttempts = 0;
           logMedia('remote track attached', {
@@ -1474,8 +1604,8 @@ INDEX_HTML = """<!doctype html>
           ? qualityProfileKey(hostInfo.quality.profile)
           : null;
         startQualityStatsReporter();
-        overlayEl.textContent = 'negotiating';
-        setStageStatus('negotiating');
+        overlayEl.textContent = '正在协商视频连接';
+        setStageStatus('正在协商');
         logMedia('offer sent', {
           type: connection.localDescription.type,
           iceComplete,
@@ -1504,8 +1634,8 @@ INDEX_HTML = """<!doctype html>
           }
         }
         remoteVideo.srcObject = null;
-        overlayEl.textContent = signalReady ? 'signal ready' : 'signal idle';
-        updatePreviewControls(false, 'preview stopped');
+        overlayEl.textContent = signalReady ? '已连接，画面未启动' : '等待连接';
+        updatePreviewControls(false, '画面已停止');
       }
 
       function scheduleMediaReconnect(reason) {
@@ -1518,7 +1648,7 @@ INDEX_HTML = """<!doctype html>
         const delayMs = Math.min(3000, 500 * (2 ** mediaReconnectAttempts));
         mediaReconnectAttempts += 1;
         overlayEl.textContent = `video ${reason}, ${delayMs}ms 后重建`;
-        setStageStatus('media reconnect');
+        setStageStatus('正在重连画面');
         mediaReconnectTimer = window.setTimeout(async () => {
           mediaReconnectTimer = null;
           if (!previewDesired || !signalSocket || signalSocket.readyState !== WebSocket.OPEN || !signalReady) {
@@ -2034,8 +2164,8 @@ INDEX_HTML = """<!doctype html>
           }
           await startPreview();
         } catch (error) {
-          overlayEl.textContent = 'preview failed';
-          setStageStatus('preview failed');
+          overlayEl.textContent = '画面启动失败';
+          setStageStatus('画面失败');
           logMedia('preview failed', { error: String(error) });
         }
       });
@@ -2045,8 +2175,8 @@ INDEX_HTML = """<!doctype html>
           await stopPreview({ notifyHost: true, keepDesired: true });
           await startPreview();
         } catch (error) {
-          overlayEl.textContent = 'rebuild failed';
-          setStageStatus('rebuild failed');
+          overlayEl.textContent = '画面重连失败';
+          setStageStatus('重连失败');
           logMedia('preview rebuild failed', { error: String(error) });
         }
       });

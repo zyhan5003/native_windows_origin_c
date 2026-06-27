@@ -79,6 +79,17 @@ def test_webui_has_preview_lifecycle_and_view_controls() -> None:
     assert 'id="fullscreenBtn"' in INDEX_HTML
     assert "async function stopPreview" in INDEX_HTML
     assert "type: 'webrtc_close'" in INDEX_HTML
-    assert "streamBtn.textContent = active ? '停止视频预览' : '启动视频预览';" in INDEX_HTML
+    assert "streamBtn.textContent = active ? '停止画面预览' : '2. 启动画面预览';" in INDEX_HTML
     assert "controlSurface.requestFullscreen()" in INDEX_HTML
     assert "controlSurface.classList.toggle('fit-cover'" in INDEX_HTML
+
+
+def test_webui_guides_non_professional_users() -> None:
+    assert "远程控制台" in INDEX_HTML
+    assert 'aria-label="三步开始"' in INDEX_HTML
+    assert "align-self: start;" in INDEX_HTML
+    assert "1. 连接主机" in INDEX_HTML
+    assert "2. 启动画面预览" in INDEX_HTML
+    assert "3. 启用键鼠控制" in INDEX_HTML
+    assert "不确定时保持自动" in INDEX_HTML
+    assert "高级诊断日志" in INDEX_HTML
