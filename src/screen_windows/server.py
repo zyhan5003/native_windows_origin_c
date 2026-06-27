@@ -559,7 +559,13 @@ class HostServer:
         mode = str(payload.get("mode", "auto")).lower()
         try:
             if mode == "manual":
-                state = self._quality_controller.set_manual(str(payload.get("profile", "")))
+                state = self._quality_controller.set_manual(
+                    str(payload.get("profile", "")),
+                    width=payload.get("width"),
+                    height=payload.get("height"),
+                    fps=payload.get("fps"),
+                    bitrate_mbps=payload.get("bitrate_mbps"),
+                )
             elif mode == "auto":
                 if "signals" in payload:
                     signal = QualitySignal.from_dict(payload.get("signals"))

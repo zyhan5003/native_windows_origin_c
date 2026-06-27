@@ -921,6 +921,27 @@ async def _test_quality_state_can_be_read_and_locked() -> None:
                 json.dumps(
                     {
                         "type": "quality",
+                        "mode": "manual",
+                        "profile": "standard",
+                        "width": 1600,
+                        "height": 900,
+                        "fps": 45,
+                        "bitrate_mbps": 7.5,
+                    }
+                )
+            )
+            custom_message = json.loads(await ws.recv())
+            assert custom_message["type"] == "quality_state"
+            assert custom_message["quality"]["profile"]["key"] == "custom"
+            assert custom_message["quality"]["profile"]["width"] == 1600
+            assert custom_message["quality"]["profile"]["height"] == 900
+            assert custom_message["quality"]["profile"]["fps"] == 45
+            assert custom_message["quality"]["profile"]["bitrate_mbps"] == 7.5
+
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "quality",
                         "action": "signals",
                         "signals": {
                             "rtt_ms": 90,
@@ -933,7 +954,7 @@ async def _test_quality_state_can_be_read_and_locked() -> None:
             signal_message = json.loads(await ws.recv())
             assert signal_message["type"] == "quality_state"
             assert signal_message["quality"]["mode"] == "manual"
-            assert signal_message["quality"]["profile"]["key"] == "fast"
+            assert signal_message["quality"]["profile"]["key"] == "custom"
             assert signal_message["quality"]["last_signal"]["rtt_ms"] == 90.0
     finally:
         await host.shutdown()

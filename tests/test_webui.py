@@ -59,3 +59,15 @@ def test_webui_rebuilds_media_when_webrtc_fails() -> None:
     assert "mediaReconnectAttempts += 1;" in INDEX_HTML
     assert "await startPreview();" in INDEX_HTML
     assert "clearMediaReconnectTimer();" in INDEX_HTML
+
+
+def test_webui_exposes_manual_resolution_fps_and_bitrate_controls() -> None:
+    assert 'id="qualityResolution"' in INDEX_HTML
+    assert 'id="qualityFps"' in INDEX_HTML
+    assert 'id="qualityBitrate"' in INDEX_HTML
+    assert '<option value="1600x900">1600 x 900</option>' in INDEX_HTML
+    assert "payload.width = resolution.width;" in INDEX_HTML
+    assert "payload.height = resolution.height;" in INDEX_HTML
+    assert "payload.fps = Number(qualityFps.value);" in INDEX_HTML
+    assert "payload.bitrate_mbps = Number(qualityBitrate.value);" in INDEX_HTML
+    assert "function qualityProfileKey(profile)" in INDEX_HTML

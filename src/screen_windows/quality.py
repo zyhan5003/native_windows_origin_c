@@ -153,9 +153,23 @@ class QualityController:
             locked=self._mode == "manual",
         )
 
-    def set_manual(self, profile: str) -> QualityState:
+    def set_manual(
+        self,
+        profile: str,
+        *,
+        width: Any | None = None,
+        height: Any | None = None,
+        fps: Any | None = None,
+        bitrate_mbps: Any | None = None,
+    ) -> QualityState:
         self._mode = "manual"
-        self._profile = _get_profile(profile)
+        self._profile = _manual_profile(
+            profile,
+            width=width,
+            height=height,
+            fps=fps,
+            bitrate_mbps=bitrate_mbps,
+        )
         self._clear_pending()
         return self.state
 
@@ -232,8 +246,8 @@ class QualityController:
         return QUALITY_PROFILES["limit"]
 
     def _required_hold_seconds(self, desired: QualityProfile) -> float:
-        desired_index = PROFILE_ORDER.index(desired.key)
-        current_index = PROFILE_ORDER.index(self._profile.key)
+        desired_index = _profile_rank(desired.key)
+        current_index = _profile_rank(self._profile.key)
         if desired_index > current_index:
             return UPGRADE_HOLD_SECONDS
         return DOWNGRADE_HOLD_SECONDS
@@ -261,3 +275,56 @@ def _get_profile(key: str) -> QualityProfile:
     if profile_key not in QUALITY_PROFILES:
         raise ValueError(f"unknown quality profile: {key}")
     return QUALITY_PROFILES[profile_key]
+
+
+def _profile_rank(key: str) -> int:
+    if key in PROFILE_ORDER:
+        return PROFILE_ORDER.index(key)
+    return PROFILE_ORDER.index("standard")
+
+
+def _manual_profile(
+    profile: str,
+    *,
+    width: Any | None,
+    height: Any | None,
+    fps: Any | None,
+    bitrate_mbps: Any | None,
+) -> QualityProfile:
+    base = _get_profile(profile)
+    if width is None and height is None and fps is None and bitrate_mbps is None:
+        return base
+
+    # 手动档允许用户直接选择分辨率/FPS/码率，Track 和 SDP 会使用这些值。
+    custom_width = _bounded_int(width if width is not None else base.width, "width", 320, 3840)
+    custom_height = _bounded_int(height if height is not None else base.height, "height", 180, 2160)
+    custom_fps = _bounded_int(fps if fps is not None else base.fps, "fps", 5, 120)
+    custom_bitrate = _bounded_float(
+        bitrate_mbps if bitrate_mbps is not None else base.bitrate_mbps,
+        "bitrate_mbps",
+        0.1,
+        100.0,
+    )
+    return QualityProfile(
+        key="custom",
+        name="自定义",
+        fps=custom_fps,
+        width=custom_width,
+        height=custom_height,
+        bitrate_mbps=custom_bitrate,
+        max_rtt_ms=None,
+    )
+
+
+def _bounded_int(value: Any, field_name: str, minimum: int, maximum: int) -> int:
+    parsed = int(value)
+    if parsed < minimum or parsed > maximum:
+        raise ValueError(f"{field_name} must be between {minimum} and {maximum}")
+    return parsed
+
+
+def _bounded_float(value: Any, field_name: str, minimum: float, maximum: float) -> float:
+    parsed = float(value)
+    if parsed < minimum or parsed > maximum:
+        raise ValueError(f"{field_name} must be between {minimum} and {maximum}")
+    return parsed

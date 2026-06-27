@@ -10,51 +10,79 @@ INDEX_HTML = """<!doctype html>
     <style>
       :root {
         color-scheme: light;
-        --bg-1: #edf3f8;
-        --bg-2: #dfe7f0;
-        --panel: rgba(8, 16, 27, 0.88);
-        --panel-soft: rgba(255, 255, 255, 0.08);
-        --text: #eff5fb;
-        --muted: #9eb0c2;
-        --accent: #88f06d;
-        --accent-2: #ffb84f;
-        --border: rgba(255, 255, 255, 0.14);
+        --bg-1: #081018;
+        --bg-2: #101d29;
+        --panel: rgba(9, 18, 27, 0.78);
+        --panel-strong: rgba(5, 11, 17, 0.92);
+        --panel-soft: rgba(255, 255, 255, 0.07);
+        --text: #f5efe3;
+        --muted: #a4b5bf;
+        --accent: #5ff0c8;
+        --accent-2: #ffb44a;
+        --danger: #ff6d5e;
+        --border: rgba(255, 255, 255, 0.13);
+        --line: rgba(95, 240, 200, 0.28);
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "Bahnschrift", "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: "DIN Alternate", "Bahnschrift", "Microsoft YaHei", sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(109, 210, 255, 0.34) 0, transparent 22%),
-          radial-gradient(circle at right 20%, rgba(136, 240, 109, 0.22) 0, transparent 18%),
-          linear-gradient(150deg, var(--bg-1) 0%, var(--bg-2) 100%);
+          radial-gradient(circle at 16% 12%, rgba(95, 240, 200, 0.22) 0, transparent 28%),
+          radial-gradient(circle at 84% 8%, rgba(255, 180, 74, 0.18) 0, transparent 24%),
+          linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 58%, #05090d 100%);
         color: var(--text);
+        overflow-x: hidden;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(var(--line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 74px 74px;
+        mask-image: radial-gradient(circle at 50% 20%, black, transparent 72%);
+        opacity: 0.22;
       }
       .app {
-        width: min(1180px, calc(100vw - 32px));
-        margin: 22px auto;
+        width: min(1380px, calc(100vw - 28px));
+        margin: 18px auto 28px;
         display: grid;
         gap: 18px;
+        position: relative;
       }
       .hero {
         display: grid;
-        grid-template-columns: 1.1fr 0.9fr;
+        grid-template-columns: minmax(0, 0.92fr) minmax(380px, 0.58fr);
         gap: 18px;
       }
       .panel {
         background: var(--panel);
         border: 1px solid var(--border);
-        border-radius: 26px;
+        border-radius: 28px;
         padding: 22px;
-        box-shadow: 0 18px 60px rgba(8, 18, 33, 0.2);
-        backdrop-filter: blur(18px);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+        backdrop-filter: blur(22px);
+        position: relative;
+        overflow: hidden;
+      }
+      .panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: inherit;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 28%, transparent 70%, rgba(95, 240, 200, 0.08));
       }
       h1 {
         margin: 0 0 10px;
-        font-size: clamp(30px, 4vw, 52px);
-        letter-spacing: 0.06em;
+        font-size: clamp(34px, 4.6vw, 76px);
+        letter-spacing: 0.04em;
         text-transform: uppercase;
+        line-height: 0.92;
       }
       p {
         margin: 0 0 16px;
@@ -71,7 +99,7 @@ INDEX_HTML = """<!doctype html>
         border: 1px solid var(--border);
         color: #ffffff;
         font-size: 12px;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
       }
       .accent-dot {
@@ -108,6 +136,7 @@ INDEX_HTML = """<!doctype html>
       .controls {
         display: grid;
         gap: 12px;
+        align-content: start;
       }
       .field {
         display: grid;
@@ -148,6 +177,48 @@ INDEX_HTML = """<!doctype html>
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
+      }
+      .stack {
+        display: grid;
+        gap: 12px;
+      }
+      .quality-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .quality-grid .wide {
+        grid-column: 1 / -1;
+      }
+      .stage-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      .stage-title {
+        display: grid;
+        gap: 4px;
+      }
+      .stage-title strong {
+        font-size: 18px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .stage-title span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .status-pill {
+        border: 1px solid rgba(95, 240, 200, 0.28);
+        background: rgba(95, 240, 200, 0.08);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
       .file-list {
         display: grid;
@@ -197,8 +268,9 @@ INDEX_HTML = """<!doctype html>
         transform: none;
       }
       .primary {
-        background: linear-gradient(120deg, var(--accent), #c0ff8d);
-        color: #04130a;
+        background: linear-gradient(120deg, var(--accent), #e2ffd5);
+        color: #03110e;
+        font-weight: 700;
       }
       .secondary {
         background: rgba(255, 255, 255, 0.08);
@@ -207,13 +279,16 @@ INDEX_HTML = """<!doctype html>
       }
       .workspace {
         display: grid;
-        grid-template-columns: 1.4fr 0.6fr;
+        grid-template-columns: minmax(0, 1.52fr) minmax(360px, 0.58fr);
         gap: 18px;
       }
       .video-shell {
         position: relative;
         overflow: hidden;
-        min-height: 540px;
+        min-height: 620px;
+        background:
+          linear-gradient(180deg, rgba(95, 240, 200, 0.12), transparent 32%),
+          var(--panel-strong);
       }
       .video-stage {
         aspect-ratio: 16 / 9;
@@ -227,6 +302,7 @@ INDEX_HTML = """<!doctype html>
         position: relative;
         outline: none;
         touch-action: none;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 22px 80px rgba(0, 0, 0, 0.42);
       }
       .video-stage.control-armed {
         box-shadow: 0 0 0 2px rgba(136, 240, 109, 0.95), 0 0 0 10px rgba(136, 240, 109, 0.08);
@@ -257,12 +333,15 @@ INDEX_HTML = """<!doctype html>
       .status-list {
         display: grid;
         gap: 12px;
+        align-content: start;
       }
       .status-card {
         padding: 14px 16px;
         border-radius: 18px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.08);
+        position: relative;
+        z-index: 1;
       }
       .status-card strong {
         display: block;
@@ -282,6 +361,41 @@ INDEX_HTML = """<!doctype html>
         font-family: "Cascadia Code", "Consolas", monospace;
         font-size: 12px;
         line-height: 1.5;
+        max-height: 280px;
+      }
+      .debug-details {
+        margin-top: 10px;
+      }
+      .debug-details summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .health-summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .health-chip {
+        padding: 9px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .health-chip b {
+        display: block;
+        color: var(--accent);
+        font-size: 12px;
+      }
+      .health-chip span {
+        display: block;
+        color: var(--text);
+        margin-top: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .status-line {
         color: #ffffff;
@@ -299,6 +413,12 @@ INDEX_HTML = """<!doctype html>
         .metrics {
           grid-template-columns: 1fr;
         }
+        .quality-grid {
+          grid-template-columns: 1fr;
+        }
+        .quality-grid .wide {
+          grid-column: auto;
+        }
       }
     </style>
   </head>
@@ -308,21 +428,21 @@ INDEX_HTML = """<!doctype html>
         <section class="panel hero-copy">
           <span class="badge"><span class="accent-dot"></span>screen_windows host</span>
           <div>
-            <h1>LAN Control Deck</h1>
-            <p>这一版直接打通浏览器预览链路：控制端通过 WebSocket 鉴权和信令，与受控端建立 WebRTC 视频会话。当前默认视频源为可替换的合成帧，后续无缝接入 DXcam / FFmpeg。</p>
+            <h1>Remote Flight Deck</h1>
+            <p>面向局域网远控的浏览器驾驶舱：先配对，再启动低延迟预览，随后按网络情况切换分辨率、帧率和码率。底层走 WebSocket 控制与 WebRTC 视频双通道。</p>
           </div>
           <div class="metrics">
             <div class="metric">
-              <strong>WebRTC</strong>
-              <span>UDP 视频主链路已接入</span>
+              <strong>60FPS</strong>
+              <span>手动高速档可锁定</span>
             </div>
             <div class="metric">
-              <strong>Auth</strong>
-              <span>PIN / Token 复用会话</span>
+              <strong>1080p</strong>
+              <span>分辨率可显式选择</span>
             </div>
             <div class="metric">
-              <strong>Signal</strong>
-              <span>WebSocket 独立端口</span>
+              <strong>Token</strong>
+              <span>断线后自动恢复会话</span>
             </div>
           </div>
         </section>
@@ -348,13 +468,24 @@ INDEX_HTML = """<!doctype html>
           </div>
           <div class="status-card">
             <strong>健康检查</strong>
-            <code id="health">loading...</code>
+            <div id="healthSummary" class="health-summary"></div>
+            <details class="debug-details">
+              <summary>查看原始 JSON</summary>
+              <code id="health">loading...</code>
+            </details>
           </div>
         </section>
       </section>
 
       <section class="workspace">
         <section class="panel video-shell">
+          <div class="stage-toolbar">
+            <div class="stage-title">
+              <strong>Live Desktop</strong>
+              <span>点击画面后启用远控；失焦会自动释放按键。</span>
+            </div>
+            <div id="stageStatus" class="status-pill">idle</div>
+          </div>
           <div id="controlSurface" class="video-stage" tabindex="0">
             <video id="remoteVideo" autoplay playsinline muted></video>
             <div class="overlay" id="videoOverlay">signal idle</div>
@@ -389,22 +520,48 @@ INDEX_HTML = """<!doctype html>
           </div>
           <div class="status-card">
             <strong>自适应质量</strong>
-            <div class="field">
-              <label for="qualityMode">Mode</label>
-              <select id="qualityMode">
-                <option value="auto">自动调节</option>
-                <option value="manual">手动锁定</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="qualityProfile">Profile</label>
-              <select id="qualityProfile">
-                <option value="turbo">极速 60fps / 20Mbps</option>
-                <option value="fast">高速 60fps / 10Mbps</option>
-                <option value="standard" selected>标准 30fps / 5Mbps</option>
-                <option value="eco">节能 30fps / 2Mbps</option>
-                <option value="limit">极限 15fps / 0.5Mbps</option>
-              </select>
+            <div class="quality-grid">
+              <div class="field">
+                <label for="qualityMode">Mode</label>
+                <select id="qualityMode">
+                  <option value="auto">自动调节</option>
+                  <option value="manual">手动锁定</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="qualityProfile">Preset</label>
+                <select id="qualityProfile">
+                  <option value="turbo">极速 1080p60 / 20M</option>
+                  <option value="fast">高速 1080p60 / 10M</option>
+                  <option value="standard" selected>标准 1080p30 / 5M</option>
+                  <option value="eco">节能 720p30 / 2M</option>
+                  <option value="limit">极限 720p15 / 0.5M</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="qualityResolution">Resolution</label>
+                <select id="qualityResolution">
+                  <option value="1920x1080">1920 x 1080</option>
+                  <option value="1600x900">1600 x 900</option>
+                  <option value="1366x768">1366 x 768</option>
+                  <option value="1280x720">1280 x 720</option>
+                  <option value="1024x576">1024 x 576</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="qualityFps">FPS</label>
+                <select id="qualityFps">
+                  <option value="60">60</option>
+                  <option value="45">45</option>
+                  <option value="30" selected>30</option>
+                  <option value="15">15</option>
+                </select>
+              </div>
+              <div class="field wide">
+                <label for="qualityBitrate">Bitrate Mbps</label>
+                <input id="qualityBitrate" type="number" min="0.1" max="100" step="0.1" value="5" />
+              </div>
             </div>
             <div class="actions">
               <button id="qualityApplyBtn" class="secondary" disabled>应用质量</button>
@@ -480,13 +637,22 @@ INDEX_HTML = """<!doctype html>
       let statsTimer = null;
       let displayEnabled = false;
       let touchState = null;
+      const qualityPresetDefaults = {
+        turbo: { width: 1920, height: 1080, fps: 60, bitrate: 20 },
+        fast: { width: 1920, height: 1080, fps: 60, bitrate: 10 },
+        standard: { width: 1920, height: 1080, fps: 30, bitrate: 5 },
+        eco: { width: 1280, height: 720, fps: 30, bitrate: 2 },
+        limit: { width: 1280, height: 720, fps: 15, bitrate: 0.5 },
+      };
 
       const healthEl = document.getElementById('health');
+      const healthSummaryEl = document.getElementById('healthSummary');
       const sessionStatusEl = document.getElementById('sessionStatus');
       const controlStatusEl = document.getElementById('controlStatus');
       const signalLogEl = document.getElementById('signalLog');
       const mediaLogEl = document.getElementById('mediaLog');
       const overlayEl = document.getElementById('videoOverlay');
+      const stageStatusEl = document.getElementById('stageStatus');
       const remoteVideo = document.getElementById('remoteVideo');
       const controlSurface = document.getElementById('controlSurface');
       const connectBtn = document.getElementById('connectBtn');
@@ -505,6 +671,9 @@ INDEX_HTML = """<!doctype html>
       const fileListEl = document.getElementById('fileList');
       const qualityMode = document.getElementById('qualityMode');
       const qualityProfile = document.getElementById('qualityProfile');
+      const qualityResolution = document.getElementById('qualityResolution');
+      const qualityFps = document.getElementById('qualityFps');
+      const qualityBitrate = document.getElementById('qualityBitrate');
       const qualityApplyBtn = document.getElementById('qualityApplyBtn');
       const qualityStatusEl = document.getElementById('qualityStatus');
       const displaySelect = document.getElementById('displaySelect');
@@ -611,6 +780,22 @@ INDEX_HTML = """<!doctype html>
         });
       }
 
+      function renderHealthSummary(payload) {
+        const runtime = payload.runtime || {};
+        const system = runtime.system || payload.system || {};
+        const stream = payload.stream || {};
+        const encoder = payload.encoder || {};
+        const chips = [
+          ['Host', payload.status || '--'],
+          ['Stream', `${stream.source || '--'} ${stream.width || 0}x${stream.height || 0}`],
+          ['Encoder', encoder.selected_backend || encoder.requested_backend || '--'],
+          ['CPU/MEM', `${formatMetric(system.cpu_percent, 1, '%')} / ${formatMetric(system.memory_rss_mb, 0, 'MB')}`],
+        ];
+        healthSummaryEl.innerHTML = chips
+          .map(([label, value]) => `<div class="health-chip"><b>${label}</b><span>${value}</span></div>`)
+          .join('');
+      }
+
       function fileAccessQuery() {
         return fileAccessTicket ? `?ticket=${encodeURIComponent(fileAccessTicket)}` : '';
       }
@@ -658,6 +843,10 @@ INDEX_HTML = """<!doctype html>
         qualityStatusEl.innerHTML = enabled ? `<em>${message}</em>` : message;
       }
 
+      function setStageStatus(text) {
+        stageStatusEl.textContent = text;
+      }
+
       function updateDisplayControls(enabled, message) {
         displayEnabled = enabled;
         displayApplyBtn.disabled = !enabled;
@@ -684,10 +873,53 @@ INDEX_HTML = """<!doctype html>
           return;
         }
         qualityMode.value = state.mode || 'auto';
-        qualityProfile.value = state.profile.key || 'standard';
+        qualityProfile.value = qualityPresetDefaults[state.profile.key] ? state.profile.key : 'custom';
         const profile = state.profile;
+        qualityResolution.value = `${profile.width}x${profile.height}`;
+        if (qualityResolution.value !== `${profile.width}x${profile.height}`) {
+          const option = document.createElement('option');
+          option.value = `${profile.width}x${profile.height}`;
+          option.textContent = `${profile.width} x ${profile.height}`;
+          qualityResolution.appendChild(option);
+          qualityResolution.value = option.value;
+        }
+        qualityFps.value = String(profile.fps);
+        qualityBitrate.value = String(profile.bitrate_mbps);
         const pending = state.pending_profile ? `，候选 ${state.pending_profile.name}` : '';
         qualityStatusEl.innerHTML = `<em>${profile.name} ${profile.width}x${profile.height} @ ${profile.fps}fps / ${profile.bitrate_mbps}Mbps${pending}</em>`;
+        setStageStatus(`${profile.width}x${profile.height} · ${profile.fps}fps`);
+      }
+
+      function applyQualityPresetToControls() {
+        const preset = qualityPresetDefaults[qualityProfile.value];
+        if (!preset) {
+          qualityMode.value = 'manual';
+          return;
+        }
+        qualityResolution.value = `${preset.width}x${preset.height}`;
+        qualityFps.value = String(preset.fps);
+        qualityBitrate.value = String(preset.bitrate);
+      }
+
+      function parseResolution(value) {
+        const [width, height] = String(value).split('x').map((item) => Number(item));
+        if (!Number.isFinite(width) || !Number.isFinite(height)) {
+          throw new Error('invalid resolution');
+        }
+        return { width, height };
+      }
+
+      function qualityProfileKey(profile) {
+        if (!profile) {
+          return null;
+        }
+        return [
+          profile.key,
+          profile.width,
+          profile.height,
+          profile.fps,
+          profile.bitrate_mbps,
+        ].join(':');
       }
 
       function formatMetric(value, digits = 1, suffix = '') {
@@ -817,7 +1049,9 @@ INDEX_HTML = """<!doctype html>
         const response = await fetch('/api/health');
         hostInfo = await response.json();
         healthEl.textContent = JSON.stringify(hostInfo, null, 2);
+        renderHealthSummary(hostInfo);
         overlayEl.textContent = `${hostInfo.stream.source} | ${hostInfo.stream.width}x${hostInfo.stream.height} @ ${hostInfo.stream.fps}fps`;
+        setStageStatus('health ready');
         renderQualityState(hostInfo.quality);
         renderDisplayInfo(hostInfo.stream && hostInfo.stream.display);
       }
@@ -917,6 +1151,7 @@ INDEX_HTML = """<!doctype html>
           updateControlState(false, '连接关闭');
           updateSessionStatus('控制会话已关闭');
           overlayEl.textContent = 'signal closed';
+          setStageStatus('signal closed');
           // 控制通道断开时服务端会释放旧 WebRTC 会话；本地先关旧预览，重连后再重建。
           closeLocalPreviewAfterSignalLoss().catch((error) => {
             logMedia('preview close failed after signal loss', { error: String(error) });
@@ -944,6 +1179,7 @@ INDEX_HTML = """<!doctype html>
             renderDisplayInfo(payload.display_info);
             updateSessionStatus('控制会话已认证', true);
             overlayEl.textContent = 'signal ready';
+            setStageStatus('signal ready');
             startControlPingReporter();
             startStatsReporter();
             requestQualityState();
@@ -1167,6 +1403,7 @@ INDEX_HTML = """<!doctype html>
         connection.addEventListener('track', (event) => {
           remoteVideo.srcObject = event.streams[0];
           overlayEl.textContent = 'video live';
+          setStageStatus('video live');
           controlBtn.disabled = false;
           mediaReconnectAttempts = 0;
           logMedia('remote track attached', {
@@ -1204,11 +1441,12 @@ INDEX_HTML = """<!doctype html>
           description_type: connection.localDescription.type,
           sdp: connection.localDescription.sdp,
         }));
-        activeNegotiatedProfileKey = hostInfo && hostInfo.quality && hostInfo.quality.profile
-          ? hostInfo.quality.profile.key
+        activeNegotiatedProfileKey = hostInfo && hostInfo.quality
+          ? qualityProfileKey(hostInfo.quality.profile)
           : null;
         startQualityStatsReporter();
         overlayEl.textContent = 'negotiating';
+        setStageStatus('negotiating');
         logMedia('offer sent', {
           type: connection.localDescription.type,
           iceComplete,
@@ -1226,6 +1464,7 @@ INDEX_HTML = """<!doctype html>
         const delayMs = Math.min(3000, 500 * (2 ** mediaReconnectAttempts));
         mediaReconnectAttempts += 1;
         overlayEl.textContent = `video ${reason}, ${delayMs}ms 后重建`;
+        setStageStatus('media reconnect');
         mediaReconnectTimer = window.setTimeout(async () => {
           mediaReconnectTimer = null;
           if (!previewDesired || !signalSocket || signalSocket.readyState !== WebSocket.OPEN || !signalReady) {
@@ -1248,7 +1487,7 @@ INDEX_HTML = """<!doctype html>
         if (!signalSocket || signalSocket.readyState !== WebSocket.OPEN) {
           return;
         }
-        const nextProfileKey = state.profile.key;
+        const nextProfileKey = qualityProfileKey(state.profile);
         if (!activeNegotiatedProfileKey || activeNegotiatedProfileKey === nextProfileKey) {
           return;
         }
@@ -1311,6 +1550,7 @@ INDEX_HTML = """<!doctype html>
         }
         renderDisplayInfo(payload.display);
         overlayEl.textContent = `${payload.stream.source} | ${payload.stream.width}x${payload.stream.height} @ ${payload.stream.fps}fps`;
+        setStageStatus('display switched');
         displayStatusEl.innerHTML = `<em>已切换到 #${payload.display.selected_monitor}，请重新启动预览</em>`;
         await closePreviewForDisplaySwitch();
       }
@@ -1446,6 +1686,7 @@ INDEX_HTML = """<!doctype html>
           hostInfo.webrtc = runtime.webrtc || hostInfo.webrtc;
           hostInfo.quality = runtime.quality || hostInfo.quality;
           healthEl.textContent = JSON.stringify(hostInfo, null, 2);
+          renderHealthSummary(hostInfo);
         }
         renderMediaStats(runtime);
         const video = runtime.webrtc && runtime.webrtc.sessions && runtime.webrtc.sessions[0]
@@ -1573,7 +1814,12 @@ INDEX_HTML = """<!doctype html>
           mode,
         };
         if (mode === 'manual') {
-          payload.profile = qualityProfile.value;
+          const resolution = parseResolution(qualityResolution.value);
+          payload.profile = qualityProfile.value === 'custom' ? 'standard' : qualityProfile.value;
+          payload.width = resolution.width;
+          payload.height = resolution.height;
+          payload.fps = Number(qualityFps.value);
+          payload.bitrate_mbps = Number(qualityBitrate.value);
         } else {
           payload.signals = {};
         }
@@ -1730,6 +1976,7 @@ INDEX_HTML = """<!doctype html>
           await startPreview();
         } catch (error) {
           overlayEl.textContent = 'preview failed';
+          setStageStatus('preview failed');
           logMedia('preview failed', { error: String(error) });
         }
       });
@@ -1833,6 +2080,17 @@ INDEX_HTML = """<!doctype html>
       qualityApplyBtn.addEventListener('click', async () => {
         await openSignalSession();
         applyQualitySelection();
+      });
+
+      qualityProfile.addEventListener('change', () => {
+        applyQualityPresetToControls();
+      });
+
+      [qualityResolution, qualityFps, qualityBitrate].forEach((element) => {
+        element.addEventListener('change', () => {
+          qualityMode.value = 'manual';
+          qualityProfile.value = 'custom';
+        });
       });
 
       displayApplyBtn.addEventListener('click', async () => {

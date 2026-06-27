@@ -26,6 +26,25 @@ def test_quality_controller_manual_lock_ignores_network_signal() -> None:
     assert state.profile.key == "fast"
 
 
+def test_quality_controller_accepts_manual_custom_profile() -> None:
+    controller = QualityController(mode="auto", profile="standard")
+
+    state = controller.set_manual(
+        "standard",
+        width=1600,
+        height=900,
+        fps=45,
+        bitrate_mbps=7.5,
+    )
+
+    assert state.mode == "manual"
+    assert state.profile.key == "custom"
+    assert state.profile.width == 1600
+    assert state.profile.height == 900
+    assert state.profile.fps == 45
+    assert state.profile.bitrate_mbps == 7.5
+
+
 def test_quality_controller_merges_partial_signals() -> None:
     controller = QualityController(mode="auto", profile="standard")
 

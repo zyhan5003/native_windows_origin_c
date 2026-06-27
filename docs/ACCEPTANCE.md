@@ -53,3 +53,4 @@ python -m screen_windows bench-encode
 - 2026-06-27：Web UI 远控失焦、鼠标离开或停用控制时会释放已按下的键盘/鼠标状态，降低卡键风险。
 - 2026-06-27：Web UI 控制通道重连会忽略旧 socket 的迟到 close/message，避免旧会话覆盖新预览状态。
 - 2026-06-27：Web UI 在 WebRTC 媒体连接 failed/disconnected 且信令仍可用时会自动重建预览。
+- 2026-06-27 Chrome MCP：Web UI 改为远控驾驶舱布局，健康检查收为摘要；手动自定义 `1600x900@45fps/7.5Mbps` 可生效，控制台无 error/warn/issue。
