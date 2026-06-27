@@ -8,6 +8,7 @@ from .bench import main as bench_main
 from .config import load_config
 from .host import run_host
 from .info import main as info_main
+from .launcher import LAUNCHER_DEFAULT_HOST, LAUNCHER_DEFAULT_PORT, run_launcher
 from ..network.discovery import discover_hosts
 
 
@@ -20,6 +21,25 @@ def build_parser() -> argparse.ArgumentParser:
     host_parser.add_argument("--host", default=None, help="覆盖绑定地址")
     host_parser.add_argument("--port", type=int, default=None, help="覆盖 WebSocket 端口")
     host_parser.add_argument("--http-port", type=int, default=None, help="覆盖 HTTP 端口")
+
+    launcher_parser = subparsers.add_parser("launcher", help="打开本地启动页")
+    launcher_parser.add_argument("--config", default=None, help="TOML 配置文件路径")
+    launcher_parser.add_argument(
+        "--host",
+        default=LAUNCHER_DEFAULT_HOST,
+        help="启动页绑定地址，默认仅本机可访问",
+    )
+    launcher_parser.add_argument(
+        "--port",
+        type=int,
+        default=LAUNCHER_DEFAULT_PORT,
+        help="启动页 HTTP 端口",
+    )
+    launcher_parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="只启动本地服务，不自动打开浏览器",
+    )
 
     bench_parser = subparsers.add_parser("bench-encode", help="运行最小 FFmpeg 编码链路基准")
     bench_parser.add_argument("--config", default=None, help="TOML 配置文件路径")
@@ -58,6 +78,14 @@ def main(argv: list[str] | None = None) -> int:
             host_override=args.host,
             port_override=args.port,
             http_port_override=args.http_port,
+        )
+
+    if args.command == "launcher":
+        return run_launcher(
+            host=args.host,
+            port=args.port,
+            config_path=args.config,
+            open_browser=not args.no_browser,
         )
 
     if args.command == "bench-encode":

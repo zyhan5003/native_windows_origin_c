@@ -14,3 +14,4 @@
 12. 移动端触控细项：补手机/平板双指右键、双指滚轮和不同屏宽手感验证；单指触摸板滑动与文本发送已过 Android 真机烟测。
 13. 断线重连：Chrome 预览中重启/断开主机，确认 token 自动重连并重建视频预览。
 14. 编码门禁：真实目标机器记录 `python -m screen_windows info --json` 与 `bench-encode` 输出。
+15. 启动页实机：Chrome 打开 `python -m screen_windows launcher`，从页面选择局域网/分辨率/FPS/PIN 后启动，确认地址可复制、手机可打开、停止后端口释放。

@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>screen_windows 启动台</title>
+  <style>
+    :root {
+      --ink: #f2f0e8;
+      --muted: #9ca79d;
+      --panel: rgba(20, 28, 28, 0.82);
+      --panel-strong: rgba(13, 18, 18, 0.92);
+      --line: rgba(242, 240, 232, 0.14);
+      --accent: #d7ff63;
+      --accent-2: #70d8ff;
+      --warn: #ffb86b;
+      --danger: #ff6e5f;
+      --ok: #6ff0b3;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+      --radius: 24px;
+      font-family: "Aptos Display", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 16% 16%, rgba(215, 255, 99, 0.18), transparent 31%),
+        radial-gradient(circle at 82% 6%, rgba(112, 216, 255, 0.16), transparent 29%),
+        linear-gradient(135deg, #101516 0%, #182020 48%, #0d1112 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.74), transparent 82%);
+    }
+
+    .shell {
+      position: relative;
+      width: min(1220px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 34px 0 42px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.82fr) minmax(320px, 1.28fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .status-card {
+      position: sticky;
+      top: 20px;
+      padding: 26px;
+      min-height: 640px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .status-card::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -96px;
+      bottom: -82px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(215, 255, 99, 0.2), transparent 64%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 470px;
+      font-family: "Cambria", "Microsoft YaHei UI", serif;
+      font-size: clamp(38px, 5vw, 70px);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+    }
+
+    .lede {
+      margin: 18px 0 24px;
+      color: #cbd1ca;
+      line-height: 1.72;
+      font-size: 15px;
+    }
+
+    .state-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      font-weight: 800;
+      color: var(--muted);
+    }
+
+    .state-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--muted);
+      box-shadow: 0 0 0 6px rgba(156, 167, 157, 0.12);
+    }
+
+    .state-pill.running {
+      color: var(--ok);
+    }
+
+    .state-pill.running .state-dot {
+      background: var(--ok);
+      box-shadow: 0 0 0 7px rgba(111, 240, 179, 0.15), 0 0 22px rgba(111, 240, 179, 0.75);
+      animation: pulse 1.7s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.78); opacity: 0.72; }
+    }
+
+    .connection-box {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .url-card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(0,0,0,0.22);
+    }
+
+    .url-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .url-value {
+      display: block;
+      margin-top: 9px;
+      color: var(--ink);
+      word-break: break-all;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .url-value:hover {
+      color: var(--accent);
+    }
+
+    .mini-btn {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      color: var(--ink);
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .mini-btn:hover {
+      border-color: rgba(215,255,99,0.48);
+      color: var(--accent);
+    }
+
+    .hint-list {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 10px;
+      margin: 22px 0 0;
+      padding: 0;
+      list-style: none;
+      color: #c8d0c8;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .hint-list li {
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .hint-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .form-card {
+      padding: 22px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .toolbar h2 {
+      margin: 0;
+      font-family: "Cambria", "Microsoft YaHei UI", serif;
+      font-size: 28px;
+      letter-spacing: -0.03em;
+    }
+
+    .toolbar p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button.primary,
+    button.secondary,
+    button.danger {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 18px;
+      color: #101514;
+      cursor: pointer;
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, var(--accent), #f4ffa8);
+    }
+
+    button.secondary {
+      color: var(--ink);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--line);
+    }
+
+    button.danger {
+      color: #211311;
+      background: linear-gradient(135deg, var(--danger), #ffc08a);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      transform: none;
+    }
+
+    .section {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255,255,255,0.045);
+      padding: 18px;
+      margin-top: 14px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: baseline;
+      margin-bottom: 14px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    label.field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field span {
+      color: #e9eee7;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .field small {
+      color: var(--muted);
+      min-height: 32px;
+      line-height: 1.45;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid rgba(242,240,232,0.16);
+      border-radius: 14px;
+      padding: 0 13px;
+      color: var(--ink);
+      background: var(--panel-strong);
+      outline: none;
+      font: inherit;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: rgba(215,255,99,0.7);
+      box-shadow: 0 0 0 4px rgba(215,255,99,0.12);
+    }
+
+    select option {
+      background: #121818;
+      color: var(--ink);
+    }
+
+    .quick-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: rgba(255,255,255,0.055);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .chip:hover {
+      border-color: rgba(112,216,255,0.55);
+      color: var(--accent-2);
+    }
+
+    details {
+      margin-top: 14px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--accent-2);
+      font-weight: 900;
+      padding: 12px 4px;
+    }
+
+    .notice {
+      min-height: 24px;
+      margin: 14px 0 0;
+      color: var(--warn);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .notice.ok {
+      color: var(--ok);
+    }
+
+    .footer-note {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 920px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .status-card {
+        position: relative;
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .shell {
+        width: min(100vw - 20px, 1220px);
+        padding-top: 16px;
+      }
+
+      .grid,
+      .grid.three {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: stretch;
+      }
+
+      .actions button {
+        flex: 1;
+      }
+
+      h1 {
+        font-size: 42px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="hero">
+      <aside class="card status-card">
+        <div>
+          <p class="eyebrow">Local launcher</p>
+          <h1>远程桌面启动台</h1>
+          <p class="lede">在这里选择常用参数并启动受控端。启动后，把局域网访问地址发给手机或另一台电脑，即可进入远程控制页面。</p>
+          <div id="statePill" class="state-pill">
+            <span class="state-dot"></span>
+            <span id="stateText">受控端未启动</span>
+          </div>
+
+          <div class="connection-box">
+            <div class="url-card">
+              <div class="url-label">
+                <span>局域网访问地址</span>
+                <button class="mini-btn" type="button" data-copy="accessUrl">复制</button>
+              </div>
+              <a id="accessUrl" class="url-value" href="#">启动后显示</a>
+            </div>
+            <div class="url-card">
+              <div class="url-label">
+                <span>本机打开地址</span>
+                <button class="mini-btn" type="button" data-copy="localUrl">复制</button>
+              </div>
+              <a id="localUrl" class="url-value" href="#">启动后显示</a>
+            </div>
+            <div class="url-card">
+              <div class="url-label">
+                <span>连接 PIN</span>
+                <button class="mini-btn" type="button" data-copy="pinValue">复制</button>
+              </div>
+              <strong id="pinValue" class="url-value">启动后生成或使用填写值</strong>
+            </div>
+          </div>
+        </div>
+
+        <ul class="hint-list">
+          <li>只想自己测试，访问范围选本机；要让手机连接，选局域网。</li>
+          <li>画面模糊优先提高分辨率和码率；卡顿优先降低 FPS 或选 1280x720。</li>
+          <li>不确定显卡编码能力时保持自动，程序会自动探测并降级。</li>
+        </ul>
+      </aside>
+
+      <section class="card form-card">
+        <form id="launchForm">
+          <div class="toolbar">
+            <div>
+              <h2>启动参数</h2>
+              <p>常用项在上面，高级项默认收起。修改运行参数需要先停止再重新启动。</p>
+            </div>
+            <div class="actions">
+              <button id="startBtn" class="primary" type="submit">启动受控端</button>
+              <button id="stopBtn" class="danger" type="button" disabled>停止受控端</button>
+            </div>
+          </div>
+
+          <section class="section">
+            <div class="section-title">
+              <h3>访问范围</h3>
+              <span>决定哪些设备可以打开远程控制页面</span>
+            </div>
+            <div class="grid three">
+              <label class="field">
+                <span>绑定地址</span>
+                <input name="bind" value="0.0.0.0" placeholder="0.0.0.0" />
+                <small>手机访问选 0.0.0.0；仅本机测试选 127.0.0.1。</small>
+              </label>
+              <label class="field">
+                <span>HTTP 页面端口</span>
+                <input name="http_port" type="number" min="1" max="65535" value="8766" />
+                <small>浏览器打开远程控制页面使用。</small>
+              </label>
+              <label class="field">
+                <span>WebSocket 控制端口</span>
+                <input name="ws_port" type="number" min="1" max="65535" value="8765" />
+                <small>键鼠、信令和文件传输控制通道。</small>
+              </label>
+            </div>
+            <div class="quick-row">
+              <button class="chip" type="button" data-bind="0.0.0.0">允许手机和局域网设备连接</button>
+              <button class="chip" type="button" data-bind="127.0.0.1">仅本机调试</button>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title">
+              <h3>画面质量</h3>
+              <span>决定清晰度、流畅度和宿主机压力</span>
+            </div>
+            <div class="grid three">
+              <label class="field">
+                <span>分辨率</span>
+                <select name="resolution">
+                  <option value="1920x1080">1920x1080 清晰</option>
+                  <option value="1600x900">1600x900 均衡</option>
+                  <option value="1280x720">1280x720 流畅</option>
+                  <option value="1024x576">1024x576 弱网</option>
+                  <option value="custom">自定义</option>
+                </select>
+                <small>手机上建议 1280x720 或 1600x900 起步。</small>
+              </label>
+              <label class="field">
+                <span>FPS</span>
+                <select name="fps">
+                  <option value="15">15 省资源</option>
+                  <option value="24">24 默认</option>
+                  <option value="30">30 常用</option>
+                  <option value="45">45 更顺滑</option>
+                  <option value="60">60 高性能</option>
+                </select>
+                <small>远程办公 24/30 足够，游戏或拖动画面可升高。</small>
+              </label>
+              <label class="field">
+                <span>码率 Mbps</span>
+                <input name="bitrate_mbps" type="number" min="0.1" max="100" step="0.1" value="10" />
+                <small>越高越清晰，但网络和编码压力也更高。</small>
+              </label>
+            </div>
+            <div id="customResolution" class="grid" style="display: none; margin-top: 14px;">
+              <label class="field">
+                <span>自定义宽度</span>
+                <input name="width" type="number" min="320" max="3840" value="1280" />
+                <small>建议使用 16:9，避免手机显示比例奇怪。</small>
+              </label>
+              <label class="field">
+                <span>自定义高度</span>
+                <input name="height" type="number" min="180" max="2160" value="720" />
+                <small>高度过高会增加延迟和带宽占用。</small>
+              </label>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title">
+              <h3>连接安全</h3>
+              <span>新手建议保留 PIN 首次配对</span>
+            </div>
+            <div class="grid three">
+              <label class="field">
+                <span>认证方式</span>
+                <select name="auth_mode">
+                  <option value="pin_once">首次输入 PIN，之后记住</option>
+                  <option value="always">每次都输入 PIN</option>
+                  <option value="none">无认证，仅可信内网</option>
+                </select>
+                <small>手机日常使用建议 pin_once。</small>
+              </label>
+              <label class="field">
+                <span>PIN</span>
+                <input name="pin" inputmode="numeric" maxlength="12" placeholder="留空自动生成" />
+                <small>留空会在启动后自动生成并显示。</small>
+              </label>
+              <label class="field">
+                <span>发现服务</span>
+                <select name="discovery_method">
+                  <option value="udp">UDP 广播</option>
+                  <option value="mdns">mDNS</option>
+                  <option value="both">UDP + mDNS</option>
+                  <option value="none">关闭</option>
+                </select>
+                <small>发现服务方便局域网扫描，不影响手动输入地址。</small>
+              </label>
+            </div>
+          </section>
+
+          <details>
+            <summary>高级参数</summary>
+            <section class="section">
+              <div class="section-title">
+                <h3>采集与编码</h3>
+                <span>不确定就保持自动</span>
+              </div>
+              <div class="grid three">
+                <label class="field">
+                  <span>捕获源</span>
+                  <select name="source">
+                    <option value="auto">自动</option>
+                    <option value="dxcam">DXcam</option>
+                    <option value="mss">MSS</option>
+                    <option value="synthetic">测试画面</option>
+                  </select>
+                  <small>真实桌面优先自动；排查问题可选测试画面。</small>
+                </label>
+                <label class="field">
+                  <span>显示器编号</span>
+                  <input name="monitor" type="number" min="0" max="32" value="0" />
+                  <small>主显示器通常是 0，多屏时可切换。</small>
+                </label>
+                <label class="field">
+                  <span>编码后端</span>
+                  <select name="encoder_backend">
+                    <option value="auto">自动探测</option>
+                    <option value="nvenc">NVIDIA NVENC</option>
+                    <option value="amf">AMD AMF</option>
+                    <option value="qsv">Intel QSV</option>
+                    <option value="libx264">CPU libx264</option>
+                  </select>
+                  <small>自动会优先硬编，不可用再降级。</small>
+                </label>
+              </div>
+              <div class="grid three" style="margin-top: 14px;">
+                <label class="field">
+                  <span>质量模式</span>
+                  <select name="quality_mode">
+                    <option value="auto">自动调节</option>
+                    <option value="manual">固定档位</option>
+                  </select>
+                  <small>自动会根据网络信号升降档。</small>
+                </label>
+                <label class="field">
+                  <span>质量档位</span>
+                  <select name="quality_profile">
+                    <option value="standard">标准</option>
+                    <option value="fast">高速</option>
+                    <option value="turbo">极速</option>
+                    <option value="eco">节能</option>
+                    <option value="limit">极限弱网</option>
+                  </select>
+                  <small>手动模式下固定使用该档位。</small>
+                </label>
+                <label class="field">
+                  <span>编码预设</span>
+                  <input name="encoder_preset" value="p1" />
+                  <small>硬编默认 p1，CPU 场景通常不用改。</small>
+                </label>
+              </div>
+              <div class="grid" style="margin-top: 14px;">
+                <label class="field">
+                  <span>FFmpeg 路径</span>
+                  <input name="ffmpeg_path" placeholder="留空使用 PATH 或环境变量" />
+                  <small>跨机部署不建议写死本机绝对路径。</small>
+                </label>
+                <label class="field">
+                  <span>UDP 发现端口</span>
+                  <input name="udp_port" type="number" min="1" max="65535" value="9876" />
+                  <small>同一局域网扫描时使用。</small>
+                </label>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="section-title">
+                <h3>文件传输</h3>
+                <span>控制远程上传到受控端的安全边界</span>
+              </div>
+              <div class="grid">
+                <label class="field">
+                  <span>接收目录</span>
+                  <input name="receive_dir" placeholder="留空使用 AppData 默认目录" />
+                  <small>建议默认目录，打包和换机器更稳。</small>
+                </label>
+                <label class="field">
+                  <span>单文件上限 MB</span>
+                  <input name="max_file_size_mb" type="number" min="1" max="4096" value="512" />
+                  <small>防止误传超大文件拖垮机器。</small>
+                </label>
+              </div>
+            </section>
+          </details>
+
+          <p id="notice" class="notice"></p>
+          <p class="footer-note">启动页只监听本机默认地址 127.0.0.1。真正给手机访问的是受控端 HTTP 地址，常用端口是 8766。</p>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const form = document.querySelector("#launchForm");
+    const notice = document.querySelector("#notice");
+    const statePill = document.querySelector("#statePill");
+    const stateText = document.querySelector("#stateText");
+    const startBtn = document.querySelector("#startBtn");
+    const stopBtn = document.querySelector("#stopBtn");
+    const customResolution = document.querySelector("#customResolution");
+    const accessUrl = document.querySelector("#accessUrl");
+    const localUrl = document.querySelector("#localUrl");
+    const pinValue = document.querySelector("#pinValue");
+
+    function field(name) {
+      return form.elements[name];
+    }
+
+    function setNotice(message, ok = false) {
+      notice.textContent = message || "";
+      notice.classList.toggle("ok", ok);
+    }
+
+    function setField(name, value) {
+      const input = field(name);
+      if (!input || value === undefined || value === null) return;
+      input.value = value;
+    }
+
+    function setHref(node, value) {
+      node.textContent = value || "启动后显示";
+      if (value) {
+        node.href = value;
+        node.removeAttribute("aria-disabled");
+      } else {
+        node.href = "#";
+        node.setAttribute("aria-disabled", "true");
+      }
+    }
+
+    function applyDefaults(data) {
+      setField("bind", data.server.bind);
+      setField("http_port", data.server.http_port);
+      setField("ws_port", data.server.port);
+      setField("auth_mode", data.auth.mode);
+      setField("pin", data.auth.pin || "");
+      setField("discovery_method", data.discovery.method);
+      setField("udp_port", data.discovery.udp_port);
+      setField("source", data.stream.source);
+      setField("fps", data.stream.fps);
+      setField("monitor", data.stream.monitor);
+      setField("width", data.stream.width);
+      setField("height", data.stream.height);
+      setField("encoder_backend", data.encoder.backend);
+      setField("encoder_preset", data.encoder.preset);
+      setField("ffmpeg_path", data.encoder.ffmpeg_path);
+      setField("bitrate_mbps", String(data.encoder.bitrate || "10M").replace(/m$/i, ""));
+      setField("quality_mode", data.quality.mode);
+      setField("quality_profile", data.quality.profile);
+      setField("receive_dir", data.file_transfer.receive_dir);
+      setField("max_file_size_mb", data.file_transfer.max_file_size_mb);
+
+      const resolution = `${data.stream.width}x${data.stream.height}`;
+      const hasResolution = Array.from(field("resolution").options).some(option => option.value === resolution);
+      setField("resolution", hasResolution ? resolution : "custom");
+      syncResolutionFields();
+    }
+
+    function syncResolutionFields() {
+      const isCustom = field("resolution").value === "custom";
+      customResolution.style.display = isCustom ? "grid" : "none";
+      if (!isCustom) {
+        const [width, height] = field("resolution").value.split("x");
+        setField("width", width);
+        setField("height", height);
+      }
+    }
+
+    function formPayload() {
+      const data = new FormData(form);
+      return Object.fromEntries(data.entries());
+    }
+
+    function updateStatus(status) {
+      const running = Boolean(status.running);
+      statePill.classList.toggle("running", running);
+      stateText.textContent = running ? "受控端运行中" : "受控端未启动";
+      startBtn.disabled = running;
+      stopBtn.disabled = !running;
+      startBtn.textContent = running ? "受控端已启动" : "启动受控端";
+
+      Array.from(form.elements).forEach(control => {
+        if (!control.name) return;
+        control.disabled = running;
+      });
+      startBtn.disabled = running;
+      stopBtn.disabled = !running;
+
+      setHref(accessUrl, status.access_url);
+      setHref(localUrl, status.local_url);
+      pinValue.textContent = status.pin || "启动后生成或使用填写值";
+
+      if (running && status.config) {
+        applyDefaults(status.config);
+        setNotice("受控端已启动。手机或另一台电脑请打开局域网访问地址。", true);
+      }
+    }
+
+    async function getJson(url, options) {
+      const response = await fetch(url, options);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || `请求失败：${response.status}`);
+      }
+      return payload;
+    }
+
+    async function refreshStatus() {
+      const status = await getJson("/api/status");
+      updateStatus(status);
+      return status;
+    }
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      setNotice("正在启动受控端，请稍候...");
+      startBtn.disabled = true;
+      try {
+        const status = await getJson("/api/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formPayload()),
+        });
+        updateStatus(status);
+      } catch (error) {
+        startBtn.disabled = false;
+        setNotice(error.message || String(error));
+      }
+    });
+
+    stopBtn.addEventListener("click", async () => {
+      setNotice("正在停止受控端...");
+      stopBtn.disabled = true;
+      try {
+        const status = await getJson("/api/stop", { method: "POST" });
+        updateStatus(status);
+        setNotice("受控端已停止，可以修改参数后重新启动。", true);
+      } catch (error) {
+        setNotice(error.message || String(error));
+      }
+    });
+
+    field("resolution").addEventListener("change", syncResolutionFields);
+
+    document.querySelectorAll("[data-bind]").forEach(button => {
+      button.addEventListener("click", () => {
+        field("bind").value = button.dataset.bind;
+      });
+    });
+
+    document.querySelectorAll("[data-copy]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const target = document.querySelector(`#${button.dataset.copy}`);
+        const value = target.textContent.trim();
+        if (!value || value.includes("启动后")) return;
+        await navigator.clipboard.writeText(value);
+        setNotice("已复制到剪贴板。", true);
+      });
+    });
+
+    async function init() {
+      try {
+        const defaults = await getJson("/api/defaults");
+        applyDefaults(defaults);
+        await refreshStatus();
+      } catch (error) {
+        setNotice(error.message || String(error));
+      }
+    }
+
+    init();
+    setInterval(() => {
+      refreshStatus().catch(() => {});
+    }, 3000);
+  </script>
+</body>
+</html>

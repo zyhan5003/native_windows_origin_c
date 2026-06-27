@@ -25,6 +25,19 @@ def test_cli_registers_info_command() -> None:
     assert args.json is True
 
 
+def test_cli_registers_launcher_command() -> None:
+    parser = build_parser()
+
+    args = parser.parse_args(
+        ["launcher", "--host", "127.0.0.1", "--port", "8771", "--no-browser"]
+    )
+
+    assert args.command == "launcher"
+    assert args.host == "127.0.0.1"
+    assert args.port == 8771
+    assert args.no_browser is True
+
+
 def test_cli_registers_bench_encode_overrides() -> None:
     parser = build_parser()
 
@@ -73,4 +86,26 @@ def test_cli_host_returns_run_host_exit_code(monkeypatch) -> None:
         "host_override": "127.0.0.1",
         "port_override": 8765,
         "http_port_override": 8766,
+    }
+
+
+def test_cli_launcher_returns_run_launcher_exit_code(monkeypatch) -> None:
+    from screen_windows.app import cli as module
+
+    calls = {}
+
+    def fake_run_launcher(**kwargs):
+        calls.update(kwargs)
+        return 0
+
+    monkeypatch.setattr(module, "run_launcher", fake_run_launcher)
+
+    exit_code = cli_main(["launcher", "--host", "127.0.0.1", "--port", "8771", "--no-browser"])
+
+    assert exit_code == 0
+    assert calls == {
+        "host": "127.0.0.1",
+        "port": 8771,
+        "config_path": None,
+        "open_browser": False,
     }

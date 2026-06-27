@@ -16,6 +16,18 @@ Windows 优先的局域网高性能远程桌面项目。
 
 ```powershell
 python -m pip install -e .[dev]
+python -m screen_windows launcher
+```
+
+打开本地启动页：
+
+```text
+http://127.0.0.1:8770
+```
+
+也可以继续使用命令行直接启动受控端：
+
+```powershell
 python -m screen_windows host --host 127.0.0.1 --port 8765 --http-port 8766
 ```
 
