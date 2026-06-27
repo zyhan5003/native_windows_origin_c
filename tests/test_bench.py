@@ -18,7 +18,7 @@ def test_run_encode_bench_returns_expected_shape(monkeypatch) -> None:
         stderr_output = ""
 
         def run_frames(self, frames):
-            assert len(frames) == 24
+            assert len(frames) == 12
             assert isinstance(frames[0], np.ndarray)
             return EncodingStats(
                 started_at=datetime.now(UTC),
@@ -31,6 +31,7 @@ def test_run_encode_bench_returns_expected_shape(monkeypatch) -> None:
 
     class FakeManager:
         def __init__(self, encoder_config: EncoderConfig, stream_config: StreamConfig) -> None:
+            self.stream_config = stream_config
             self.selection = type(
                 "Selection",
                 (),
@@ -58,15 +59,16 @@ def test_run_encode_bench_returns_expected_shape(monkeypatch) -> None:
 
     monkeypatch.setattr(module, "EncoderManager", FakeManager)
 
-    result = run_encode_bench()
+    result = run_encode_bench(frame_count=12, width=320, height=180, fps=30)
 
     assert result["encoder"] == "libx264"
-    assert result["frames_written"] == 24
+    assert result["frames_written"] == 12
     assert result["return_code"] == 0
     assert result["ok"] is True
     assert result["pipeline_ready"] is True
     assert result["selection_reason"] == "selected by runtime probe fallback"
     assert result["probe_results"] == []
+    assert result["bench"] == {"width": 320, "height": 180, "fps": 30, "frames": 12}
 
 
 def test_bench_main_reports_structured_pipeline_error(
@@ -75,17 +77,48 @@ def test_bench_main_reports_structured_pipeline_error(
 ) -> None:
     from screen_windows import bench as module
 
-    def fake_run_encode_bench(frame_count: int = 24) -> dict[str, object]:
+    def fake_run_encode_bench(**kwargs) -> dict[str, object]:
         raise FfmpegPipelineError(
             "ffmpeg rawvideo pipeline unavailable (missing demuxers: rawvideo)"
         )
 
     monkeypatch.setattr(module, "run_encode_bench", fake_run_encode_bench)
 
-    exit_code = bench_main()
+    exit_code = bench_main([])
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 1
     assert payload["ok"] is False
     assert payload["error_type"] == "FfmpegPipelineError"
     assert "missing demuxers: rawvideo" in payload["error"]
+
+
+def test_bench_main_forwards_cli_overrides(monkeypatch, capsys) -> None:
+    from screen_windows import bench as module
+
+    calls = []
+
+    def fake_run_encode_bench(**kwargs) -> dict[str, object]:
+        calls.append(("bench", kwargs))
+        return {"ok": True, "bench": {"frames": kwargs["frame_count"]}}
+
+    monkeypatch.setattr(module, "load_config", lambda path: None)
+    monkeypatch.setattr(module, "run_encode_bench", fake_run_encode_bench)
+
+    exit_code = bench_main(["--config", "host.toml", "--frames", "9", "--width", "800", "--height", "450", "--fps", "60", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["ok"] is True
+    assert calls == [
+        (
+            "bench",
+            {
+                "config": None,
+                "frame_count": 9,
+                "width": 800,
+                "height": 450,
+                "fps": 60,
+            },
+        )
+    ]

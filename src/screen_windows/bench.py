@@ -1,15 +1,31 @@
 from __future__ import annotations
 
+import argparse
 import json
+from dataclasses import replace
 
-from .config import EncoderConfig, StreamConfig
+from .config import AppConfig, load_config
 from .encoder import EncoderManager, FfmpegError
 from .video_source import SyntheticFrameSource
 
 
-def run_encode_bench(frame_count: int = 24) -> dict[str, object]:
-    stream_config = StreamConfig(source="synthetic", width=640, height=360, fps=24)
-    encoder_manager = EncoderManager(EncoderConfig(), stream_config)
+def run_encode_bench(
+    *,
+    config: AppConfig | None = None,
+    frame_count: int = 24,
+    width: int | None = None,
+    height: int | None = None,
+    fps: int | None = None,
+) -> dict[str, object]:
+    base_config = config or AppConfig()
+    stream_config = replace(
+        base_config.stream,
+        source="synthetic",
+        width=width or base_config.stream.width,
+        height=height or base_config.stream.height,
+        fps=fps or base_config.stream.fps,
+    )
+    encoder_manager = EncoderManager(base_config.encoder, stream_config)
     if not encoder_manager.pipeline_support.ready:
         raise RuntimeError(encoder_manager.pipeline_support.reason)
 
@@ -25,6 +41,12 @@ def run_encode_bench(frame_count: int = 24) -> dict[str, object]:
         "ffmpeg_path": encoder_manager.capabilities.ffmpeg_path,
         "pipeline_ready": encoder_manager.pipeline_support.ready,
         "pipeline_reason": encoder_manager.pipeline_support.reason,
+        "bench": {
+            "width": stream_config.width,
+            "height": stream_config.height,
+            "fps": stream_config.fps,
+            "frames": frame_count,
+        },
         "probe_results": [
             {
                 "backend": probe.backend,
@@ -42,9 +64,24 @@ def run_encode_bench(frame_count: int = 24) -> dict[str, object]:
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="运行最小 FFmpeg 编码链路基准")
+    parser.add_argument("--config", default=None, help="TOML 配置文件路径")
+    parser.add_argument("--frames", type=int, default=24, help="写入帧数")
+    parser.add_argument("--width", type=int, default=None, help="覆盖测试宽度")
+    parser.add_argument("--height", type=int, default=None, help="覆盖测试高度")
+    parser.add_argument("--fps", type=int, default=None, help="覆盖测试 FPS")
+    parser.add_argument("--json", action="store_true", help="格式化 JSON 输出")
+    args = parser.parse_args(argv)
+
     try:
-        result = run_encode_bench()
+        result = run_encode_bench(
+            config=load_config(args.config),
+            frame_count=max(args.frames, 1),
+            width=args.width,
+            height=args.height,
+            fps=args.fps,
+        )
     except FfmpegError as exc:
         print(
             json.dumps(
@@ -70,5 +107,5 @@ def main() -> int:
         )
         return 1
 
-    print(json.dumps(result, ensure_ascii=False))
+    print(json.dumps(result, ensure_ascii=False, indent=2 if args.json else None))
     return 0

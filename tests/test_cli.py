@@ -25,6 +25,35 @@ def test_cli_registers_info_command() -> None:
     assert args.json is True
 
 
+def test_cli_registers_bench_encode_overrides() -> None:
+    parser = build_parser()
+
+    args = parser.parse_args(
+        [
+            "bench-encode",
+            "--config",
+            "host_config.toml",
+            "--frames",
+            "9",
+            "--width",
+            "800",
+            "--height",
+            "450",
+            "--fps",
+            "60",
+            "--json",
+        ]
+    )
+
+    assert args.command == "bench-encode"
+    assert args.config == "host_config.toml"
+    assert args.frames == 9
+    assert args.width == 800
+    assert args.height == 450
+    assert args.fps == 60
+    assert args.json is True
+
+
 def test_cli_host_returns_run_host_exit_code(monkeypatch) -> None:
     from screen_windows import cli as module
 

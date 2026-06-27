@@ -21,7 +21,13 @@ def build_parser() -> argparse.ArgumentParser:
     host_parser.add_argument("--port", type=int, default=None, help="覆盖 WebSocket 端口")
     host_parser.add_argument("--http-port", type=int, default=None, help="覆盖 HTTP 端口")
 
-    subparsers.add_parser("bench-encode", help="运行最小 FFmpeg 编码链路基准")
+    bench_parser = subparsers.add_parser("bench-encode", help="运行最小 FFmpeg 编码链路基准")
+    bench_parser.add_argument("--config", default=None, help="TOML 配置文件路径")
+    bench_parser.add_argument("--frames", type=int, default=24, help="写入帧数")
+    bench_parser.add_argument("--width", type=int, default=None, help="覆盖测试宽度")
+    bench_parser.add_argument("--height", type=int, default=None, help="覆盖测试高度")
+    bench_parser.add_argument("--fps", type=int, default=None, help="覆盖测试 FPS")
+    bench_parser.add_argument("--json", action="store_true", help="格式化 JSON 输出")
 
     info_parser = subparsers.add_parser("info", help="输出环境与编码链路摘要")
     info_parser.add_argument("--config", default=None, help="TOML 配置文件路径")
@@ -55,7 +61,18 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if args.command == "bench-encode":
-        return bench_main()
+        bench_args: list[str] = ["--frames", str(args.frames)]
+        if args.config is not None:
+            bench_args.extend(["--config", args.config])
+        if args.width is not None:
+            bench_args.extend(["--width", str(args.width)])
+        if args.height is not None:
+            bench_args.extend(["--height", str(args.height)])
+        if args.fps is not None:
+            bench_args.extend(["--fps", str(args.fps)])
+        if args.json:
+            bench_args.append("--json")
+        return bench_main(bench_args)
 
     if args.command == "info":
         info_args: list[str] = []
