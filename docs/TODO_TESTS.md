@@ -6,7 +6,7 @@
 4. 系统性能：真实预览/硬编/长稳场景记录 `/api/health.system` 样本数/峰值与视频 `capture_ms/resize_ms`。
 5. 键盘控制：Chrome 验证字母数字、修饰键、功能键、方向键、小键盘和 PrintScreen/NumLock/ScrollLock。
 6. 服务发现：真实 LAN 下用 `python -m screen_windows discover --method both --json` 验证 UDP/mDNS 可发现，mDNS 目标 <5 秒。
-7. 认证持久化：配置 `auth.token_store_path` 后，真实浏览器确认主机重启后 token 可复用且无需重新 PIN。
+7. 认证持久化：真实 Chrome 确认主机重启后 token 可复用且无需重新 PIN。
 8. 认证模式：Chrome 验证 `auth.mode = "none"` 无需 PIN，`auth.mode = "always"` 禁止 token 复用。
 9. Stats 协议：Chrome 确认 WS `{type:"stats"}`、`/api/health` 和媒体状态面板的系统/视频/AQE 数据长稳一致。
 10. 多显示器：真实 Windows 多显示器环境确认 `auth_ok.display_info.monitors` 与 `/api/health.stream.display` 一致。

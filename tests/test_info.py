@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from screen_windows.config import AppConfig, EncoderConfig, StreamConfig
+from screen_windows.config import AppConfig, AuthConfig, EncoderConfig, StreamConfig
 from screen_windows.encoder import (
     EncoderProbeResult,
     EncoderSelection,
@@ -56,6 +56,7 @@ def test_build_info_payload_contains_encoder_gate(monkeypatch) -> None:
 
     payload = build_info_payload(
         AppConfig(
+            auth=AuthConfig(token_store_path="D:/tmp/screen-tokens.json"),
             stream=StreamConfig(source="synthetic", width=640, height=360, fps=24),
         )
     )
@@ -64,6 +65,7 @@ def test_build_info_payload_contains_encoder_gate(monkeypatch) -> None:
     assert payload["encoder"]["pipeline_ready"] is True
     assert payload["encoder"]["selected_backend"] == "libx264"
     assert payload["encoder"]["probe_results"][0]["success"] is True
+    assert payload["auth"]["token_store_path"] == "D:/tmp/screen-tokens.json"
     assert payload["stream"]["display"]["monitors"]
 
 

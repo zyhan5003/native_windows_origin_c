@@ -9,7 +9,14 @@ from aiortc import RTCPeerConnection, RTCSessionDescription
 from websockets.asyncio.client import connect
 
 from screen_windows.clipboard import ClipboardService, RecordingClipboardBackend
-from screen_windows.config import AppConfig, AuthConfig, ServerConfig, QualityConfig, StreamConfig
+from screen_windows.config import (
+    AppConfig,
+    AuthConfig,
+    QualityConfig,
+    ServerConfig,
+    StreamConfig,
+    load_config,
+)
 from screen_windows.display import DisplayInfo, DisplayMonitor
 from screen_windows.filetransfer import FileTransferService
 from screen_windows.input import RecordingInputExecutor
@@ -287,6 +294,69 @@ async def _test_websocket_auth_token_survives_host_restart(tmp_path) -> None:
         timestamp = int(datetime.now(UTC).timestamp())
         signature = second_host.token_manager.build_hmac(token, timestamp)
         async with connect("ws://127.0.0.1:19165") as ws:
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "auth",
+                        "version": "0.1.0",
+                        "token": token,
+                        "timestamp": timestamp,
+                        "signature": signature,
+                    }
+                )
+            )
+            message = json.loads(await ws.recv())
+            assert message["type"] == "auth_ok"
+            assert message["token"] == token
+    finally:
+        await second_host.shutdown()
+
+
+def test_websocket_auth_token_survives_default_config_restart(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("APPDATA", str(tmp_path / "appdata"))
+    config_file = tmp_path / "host_config.toml"
+    config_file.write_text(
+        """
+[server]
+bind = "127.0.0.1"
+port = 19065
+http_port = 19066
+
+[auth]
+pin = "123456"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    asyncio.run(_test_websocket_auth_token_survives_default_config_restart(config_file))
+
+
+async def _test_websocket_auth_token_survives_default_config_restart(config_file) -> None:
+    first_host = HostServer(load_config(config_file), clipboard_service=build_recording_clipboard())
+    await first_host.start()
+    try:
+        async with connect("ws://127.0.0.1:19065") as ws:
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "auth",
+                        "version": "0.1.0",
+                        "pin": "123456",
+                    }
+                )
+            )
+            message = json.loads(await ws.recv())
+            assert message["type"] == "auth_ok"
+            token = message["token"]
+    finally:
+        await first_host.shutdown()
+
+    second_host = HostServer(load_config(config_file), clipboard_service=build_recording_clipboard())
+    await second_host.start()
+    try:
+        timestamp = int(datetime.now(UTC).timestamp())
+        signature = second_host.token_manager.build_hmac(token, timestamp)
+        async with connect("ws://127.0.0.1:19065") as ws:
             await ws.send(
                 json.dumps(
                     {

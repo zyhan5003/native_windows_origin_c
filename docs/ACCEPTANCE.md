@@ -40,3 +40,4 @@ python -m screen_windows bench-encode
 ## 自动化覆盖
 
 - 2026-06-27：文件传输覆盖零字节、错误 offset、超限、非法/保留名、重名、`.part` 过滤和断连清理。
+- 2026-06-27：默认配置启用 token hash 持久化，Host 重启后 WebSocket token 认证可复用。

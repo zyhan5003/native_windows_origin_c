@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import os
 from pathlib import Path
 import tomllib
 
 
 DEFAULT_CONFIG_PATH = Path("host_config.toml")
+APP_DIR_NAME = "screen_windows"
+TOKEN_STORE_FILE_NAME = "tokens.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,10 +75,17 @@ class AppConfig:
     quality: QualityConfig = QualityConfig()
 
 
+def default_token_store_path() -> str:
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        return str(Path(appdata) / APP_DIR_NAME / TOKEN_STORE_FILE_NAME)
+    return str(Path.home() / f".{APP_DIR_NAME}" / TOKEN_STORE_FILE_NAME)
+
+
 def load_config(path: str | Path | None = None) -> AppConfig:
     config_path = Path(path) if path else DEFAULT_CONFIG_PATH
     if not config_path.exists():
-        return AppConfig()
+        return AppConfig(auth=AuthConfig(token_store_path=default_token_store_path()))
 
     raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
     server_raw = raw.get("server", {})
@@ -96,7 +106,9 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             mode=auth_raw.get("mode", "pin_once"),
             pin=str(auth_raw.get("pin", "")),
             token_ttl_seconds=int(auth_raw.get("token_ttl_seconds", 3600)),
-            token_store_path=str(auth_raw.get("token_store_path", "")),
+            token_store_path=str(
+                auth_raw.get("token_store_path") or default_token_store_path()
+            ),
         ),
         discovery=DiscoveryConfig(
             method=discovery_raw.get("method", "udp"),

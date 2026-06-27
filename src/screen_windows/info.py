@@ -57,6 +57,7 @@ def build_info_payload(config: AppConfig) -> dict[str, Any]:
         "auth": {
             "mode": config.auth.mode,
             "token_store_configured": bool(config.auth.token_store_path),
+            "token_store_path": config.auth.token_store_path,
         },
         "discovery": {
             "method": config.discovery.method,
