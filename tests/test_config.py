@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from screen_windows.app.config import apply_overrides, default_token_store_path, load_config
+from screen_windows.app.config import (
+    apply_overrides,
+    default_receive_dir_path,
+    default_token_store_path,
+    load_config,
+)
 
 
 def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
@@ -21,6 +26,7 @@ def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
     assert config.encoder.bitrate == "10M"
     assert config.encoder.preset == "p1"
     assert config.auth.token_store_path == default_token_store_path()
+    assert config.file_transfer.receive_dir == default_receive_dir_path()
     assert config.quality.mode == "auto"
     assert config.quality.profile == "standard"
 
@@ -29,6 +35,12 @@ def test_default_token_store_path_uses_appdata(monkeypatch) -> None:
     monkeypatch.setenv("APPDATA", "D:/Users/example/AppData/Roaming")
 
     assert default_token_store_path() == "D:\\Users\\example\\AppData\\Roaming\\screen_windows\\tokens.json"
+
+
+def test_default_receive_dir_path_uses_appdata(monkeypatch) -> None:
+    monkeypatch.setenv("APPDATA", "D:/Users/example/AppData/Roaming")
+
+    assert default_receive_dir_path() == "D:\\Users\\example\\AppData\\Roaming\\screen_windows\\received_files"
 
 
 def test_load_and_override_config(tmp_path: Path) -> None:

@@ -9,6 +9,7 @@ import tomllib
 DEFAULT_CONFIG_PATH = Path("host_config.toml")
 APP_DIR_NAME = "screen_windows"
 TOKEN_STORE_FILE_NAME = "tokens.json"
+RECEIVE_DIR_NAME = "received_files"
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,7 +54,7 @@ class EncoderConfig:
 
 @dataclass(frozen=True, slots=True)
 class FileTransferConfig:
-    receive_dir: str = "received_files"
+    receive_dir: str = RECEIVE_DIR_NAME
     max_file_size: int = 512 * 1024 * 1024
     chunk_size: int = 64 * 1024
 
@@ -82,10 +83,20 @@ def default_token_store_path() -> str:
     return str(Path.home() / f".{APP_DIR_NAME}" / TOKEN_STORE_FILE_NAME)
 
 
+def default_receive_dir_path() -> str:
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        return str(Path(appdata) / APP_DIR_NAME / RECEIVE_DIR_NAME)
+    return str(Path.home() / f".{APP_DIR_NAME}" / RECEIVE_DIR_NAME)
+
+
 def load_config(path: str | Path | None = None) -> AppConfig:
     config_path = Path(path) if path else DEFAULT_CONFIG_PATH
     if not config_path.exists():
-        return AppConfig(auth=AuthConfig(token_store_path=default_token_store_path()))
+        return AppConfig(
+            auth=AuthConfig(token_store_path=default_token_store_path()),
+            file_transfer=FileTransferConfig(receive_dir=default_receive_dir_path()),
+        )
 
     raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
     server_raw = raw.get("server", {})
@@ -132,7 +143,9 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             preset=str(encoder_raw.get("preset", "p1")),
         ),
         file_transfer=FileTransferConfig(
-            receive_dir=str(file_transfer_raw.get("receive_dir", "received_files")),
+            receive_dir=str(
+                file_transfer_raw.get("receive_dir") or default_receive_dir_path()
+            ),
             max_file_size=int(file_transfer_raw.get("max_file_size", 512 * 1024 * 1024)),
             chunk_size=int(file_transfer_raw.get("chunk_size", 64 * 1024)),
         ),

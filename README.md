@@ -42,7 +42,10 @@ pytest -q
 ```toml
 [auth]
 mode = "pin_once" # pin_once | always | none
-token_store_path = "tokens.json"
+# token_store_path 默认位于用户 AppData，不建议写死机器绝对路径。
+
+[file_transfer]
+# receive_dir 默认位于用户 AppData，跨机部署时可按需覆盖。
 
 [stream]
 source = "auto" # auto | dxcam | mss | synthetic
@@ -55,7 +58,7 @@ monitor = 0
 ## FFmpeg
 
 - 编码链路需要完整 FFmpeg 构建，不能使用缺少 `rawvideo`/常见 muxer 的精简版。
-- 解析优先级：`encoder.ffmpeg_path` > 环境变量 `SCREEN_WINDOWS_FFMPEG` > `PATH`/WinGet 安装 > 内置兜底候选。
+- 解析优先级：`encoder.ffmpeg_path` > 环境变量 `SCREEN_WINDOWS_FFMPEG` > `PATH`/WinGet 安装。
 - 快速门禁：`python -m screen_windows info` 查看 FFmpeg、硬编探针和显示器摘要；`bench-encode --width 1280 --height 720 --fps 60 --frames 120 --json` 再按目标场景跑编码基准。
 - Windows 可直接用 `winget install --id Gyan.FFmpeg.Essentials` 安装。
 

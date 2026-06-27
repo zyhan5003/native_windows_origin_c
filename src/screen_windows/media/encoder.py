@@ -15,11 +15,6 @@ import numpy as np
 from ..app.config import EncoderConfig, StreamConfig
 
 
-DEFAULT_FFMPEG_CANDIDATES = (
-    r"C:\Users\lenovo\.marscode\ai-chat\binary\1.7.0\modules\ai-agent\ffmpeg.exe",
-    r"C:\Users\lenovo\.marscode\ai-chat\binary\1.6.38\modules\ai-agent\ffmpeg.exe",
-)
-
 ENV_FFMPEG_PATH = "SCREEN_WINDOWS_FFMPEG"
 
 BACKEND_TO_ENCODER = {
@@ -197,7 +192,6 @@ def build_ffmpeg_candidates(explicit_path: str) -> list[str]:
         candidates.append(path_ffmpeg)
 
     candidates.extend(discover_windows_ffmpeg_candidates())
-    candidates.extend(DEFAULT_FFMPEG_CANDIDATES)
     return dedupe_candidates(candidates)
 
 
