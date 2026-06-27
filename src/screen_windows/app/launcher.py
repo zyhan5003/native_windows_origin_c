@@ -18,6 +18,7 @@ from .config import (
     StreamConfig,
     load_config,
 )
+from .process_guard import release_stale_host_processes_for_ports
 from .server import HostServer
 from ..web.webui import LAUNCHER_HTML
 
@@ -61,10 +62,17 @@ class LauncherState:
     async def start_host(self, payload: dict[str, Any]) -> HostLaunchStatus:
         async with self._lock:
             if self._host is not None:
-                raise RuntimeError("host is already running")
+                old_host = self._host
+                self._host = None
+                self._config = None
+                self._started_at = None
+                await old_host.shutdown()
 
             base_config = load_config(self._config_path)
             config = build_config_from_launcher_payload(payload, base_config)
+            release_stale_host_processes_for_ports(
+                (config.server.port, config.server.http_port)
+            )
             host = self._host_factory(config)
             try:
                 await host.start()

@@ -81,17 +81,29 @@ def test_launcher_defaults_to_mobile_stability_guidance() -> None:
     assert "手机建议先用节能 720p24 / 2M" in LAUNCHER_HTML
 
 
-def test_launcher_state_starts_and_stops_host(tmp_path: Path) -> None:
-    asyncio.run(_test_launcher_state_starts_and_stops_host(tmp_path))
+def test_launcher_state_starts_and_stops_host(tmp_path: Path, monkeypatch) -> None:
+    asyncio.run(_test_launcher_state_starts_and_stops_host(tmp_path, monkeypatch))
 
 
-async def _test_launcher_state_starts_and_stops_host(tmp_path: Path) -> None:
+async def _test_launcher_state_starts_and_stops_host(tmp_path: Path, monkeypatch) -> None:
     created: list[FakeHostServer] = []
+    cleanup_ports: list[tuple[int, int]] = []
 
     def host_factory(config: AppConfig) -> "FakeHostServer":
         host = FakeHostServer(config)
         created.append(host)
         return host
+
+    def fake_release_stale_host_processes_for_ports(ports):
+        cleanup_ports.append(tuple(ports))
+
+    import screen_windows.app.launcher as launcher_module
+
+    monkeypatch.setattr(
+        launcher_module,
+        "release_stale_host_processes_for_ports",
+        fake_release_stale_host_processes_for_ports,
+    )
 
     state = LauncherState(config_path=str(tmp_path / "missing.toml"), host_factory=host_factory)
 
@@ -108,11 +120,47 @@ async def _test_launcher_state_starts_and_stops_host(tmp_path: Path) -> None:
     assert started.local_url == "http://127.0.0.1:8766"
     assert started.pin == "654321"
     assert created[0].started is True
+    assert cleanup_ports == [(8765, 8766)]
 
     stopped = await state.stop_host()
 
     assert stopped.running is False
     assert created[0].stopped is True
+
+
+def test_launcher_start_replaces_existing_host(tmp_path: Path, monkeypatch) -> None:
+    asyncio.run(_test_launcher_start_replaces_existing_host(tmp_path, monkeypatch))
+
+
+async def _test_launcher_start_replaces_existing_host(tmp_path: Path, monkeypatch) -> None:
+    created: list[FakeHostServer] = []
+    cleanup_ports: list[tuple[int, int]] = []
+
+    def host_factory(config: AppConfig) -> "FakeHostServer":
+        host = FakeHostServer(config)
+        created.append(host)
+        return host
+
+    def fake_release_stale_host_processes_for_ports(ports):
+        cleanup_ports.append(tuple(ports))
+
+    import screen_windows.app.launcher as launcher_module
+
+    monkeypatch.setattr(
+        launcher_module,
+        "release_stale_host_processes_for_ports",
+        fake_release_stale_host_processes_for_ports,
+    )
+
+    state = LauncherState(config_path=str(tmp_path / "missing.toml"), host_factory=host_factory)
+
+    await state.start_host({"http_port": "8766", "ws_port": "8765"})
+    restarted = await state.start_host({"http_port": "9002", "ws_port": "9001"})
+
+    assert restarted.running is True
+    assert created[0].stopped is True
+    assert created[1].started is True
+    assert cleanup_ports == [(8765, 8766), (9001, 9002)]
 
 
 class FakeTokenManager:

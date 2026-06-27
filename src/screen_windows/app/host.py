@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from .config import apply_overrides, load_config
+from .process_guard import release_stale_host_processes_for_ports
 from .server import HostServer
 
 
@@ -20,6 +21,14 @@ async def _run_host_async(
         port_override=port_override,
         http_port_override=http_port_override,
     )
+    cleanup = release_stale_host_processes_for_ports(
+        (config.server.port, config.server.http_port)
+    )
+    if cleanup.terminated_pids:
+        print(
+            "screen_windows stopped stale host process(es): "
+            + ", ".join(str(pid) for pid in cleanup.terminated_pids)
+        )
 
     server = HostServer(config)
     await server.run_forever()
