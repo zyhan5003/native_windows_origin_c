@@ -47,13 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "host":
-        run_host(
+        return run_host(
             config_path=args.config,
             host_override=args.host,
             port_override=args.port,
             http_port_override=args.http_port,
         )
-        return 0
 
     if args.command == "bench-encode":
         return bench_main()

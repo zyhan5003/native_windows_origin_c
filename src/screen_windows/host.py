@@ -31,12 +31,17 @@ def run_host(
     host_override: str | None,
     port_override: int | None,
     http_port_override: int | None,
-) -> None:
-    asyncio.run(
-        _run_host_async(
-            config_path=config_path,
-            host_override=host_override,
-            port_override=port_override,
-            http_port_override=http_port_override,
+) -> int:
+    try:
+        asyncio.run(
+            _run_host_async(
+                config_path=config_path,
+                host_override=host_override,
+                port_override=port_override,
+                http_port_override=http_port_override,
+            )
         )
-    )
+    except KeyboardInterrupt:
+        print("screen_windows host stopped")
+        return 0
+    return 0

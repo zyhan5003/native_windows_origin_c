@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from screen_windows.cli import build_parser
+from screen_windows.cli import main as cli_main
 
 
 def test_cli_registers_discover_command() -> None:
@@ -22,3 +23,25 @@ def test_cli_registers_info_command() -> None:
     assert args.command == "info"
     assert args.config == "host_config.toml"
     assert args.json is True
+
+
+def test_cli_host_returns_run_host_exit_code(monkeypatch) -> None:
+    from screen_windows import cli as module
+
+    calls = {}
+
+    def fake_run_host(**kwargs):
+        calls.update(kwargs)
+        return 0
+
+    monkeypatch.setattr(module, "run_host", fake_run_host)
+
+    exit_code = cli_main(["host", "--host", "127.0.0.1", "--port", "8765", "--http-port", "8766"])
+
+    assert exit_code == 0
+    assert calls == {
+        "config_path": None,
+        "host_override": "127.0.0.1",
+        "port_override": 8765,
+        "http_port_override": 8766,
+    }
