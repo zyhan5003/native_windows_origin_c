@@ -118,8 +118,10 @@ def test_webui_exposes_mobile_text_input() -> None:
 
 def test_webui_uses_touchpad_style_mobile_control() -> None:
     assert "let remoteCursor = null;" in INDEX_HTML
+    assert "let lastRemoteCursor = null;" in INDEX_HTML
     assert "const touchPointerScale = 1.35;" in INDEX_HTML
     assert "function moveRemoteCursorBy(deltaX, deltaY)" in INDEX_HTML
+    assert "setRemoteCursor(lastRemoteCursor || defaultRemoteCursor(), { send: false })" in INDEX_HTML
     assert "remoteCursor.x + (deltaX * touchPointerScale)" in INDEX_HTML
     assert "手机使用触摸板模式" in INDEX_HTML
     assert "sendMouseClick(touchState.count >= 2 ? 'right' : 'left')" in INDEX_HTML

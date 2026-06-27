@@ -336,8 +336,8 @@ class WindowsInputExecutor:
         absolute_y = self.display_top + physical_y
         virtual_x = absolute_x - self.virtual_left
         virtual_y = absolute_y - self.virtual_top
-        normalized_x = int(round((max(0, min(virtual_x, self.virtual_width - 1)) * 65535) / max(self.virtual_width - 1, 1)))
-        normalized_y = int(round((max(0, min(virtual_y, self.virtual_height - 1)) * 65535) / max(self.virtual_height - 1, 1)))
+        normalized_x = _normalize_absolute_mouse_coordinate(virtual_x, self.virtual_width)
+        normalized_y = _normalize_absolute_mouse_coordinate(virtual_y, self.virtual_height)
         input_item = INPUT(
             type=INPUT_MOUSE,
             mi=MOUSEINPUT(
@@ -478,3 +478,14 @@ def parse_input_event(payload: dict[str, Any]) -> InputEvent:
             raise ValueError("text input event is too long")
         return TextEvent(kind="text", text=text)
     raise ValueError(f"unsupported input event type: {event_type}")
+
+
+def _normalize_absolute_mouse_coordinate(position: int, span: int) -> int:
+    span = max(span, 1)
+    clamped = max(0, min(position, span - 1))
+    if span == 1:
+        return 0
+    if clamped >= span - 1:
+        return 65535
+    # SendInput 绝对坐标使用 0..65535，边缘像素必须饱和才能稳定命中底边/右边。
+    return int(round((clamped * 65535) / max(span - 1, 1)))

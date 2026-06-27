@@ -9,6 +9,7 @@ from screen_windows.control.input import (
     RecordingInputExecutor,
     VK_CODE_MAP,
     WindowsInputExecutor,
+    _normalize_absolute_mouse_coordinate,
     parse_input_event,
 )
 
@@ -122,6 +123,15 @@ def test_windows_input_executor_scales_stream_coordinates_to_display_pixels(monk
     mouse = sent_inputs[0].mi
     assert mouse.dx == 65535
     assert mouse.dy == 65535
+
+
+def test_absolute_mouse_coordinate_normalization_reaches_edges() -> None:
+    assert _normalize_absolute_mouse_coordinate(-10, 1080) == 0
+    assert _normalize_absolute_mouse_coordinate(0, 1080) == 0
+    assert _normalize_absolute_mouse_coordinate(1078, 1080) < 65535
+    assert _normalize_absolute_mouse_coordinate(1079, 1080) == 65535
+    assert _normalize_absolute_mouse_coordinate(2000, 1080) == 65535
+    assert _normalize_absolute_mouse_coordinate(0, 1) == 0
 
 
 def test_windows_input_executor_sends_unicode_text(monkeypatch) -> None:

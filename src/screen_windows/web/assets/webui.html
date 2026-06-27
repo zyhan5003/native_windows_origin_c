@@ -822,6 +822,7 @@
       let displayEnabled = false;
       let touchState = null;
       let remoteCursor = null;
+      let lastRemoteCursor = null;
       const touchPointerScale = 1.35;
       const qualityPresetDefaults = {
         turbo: { width: 1920, height: 1080, fps: 60, bitrate: 20 },
@@ -1125,6 +1126,7 @@
         overlayEl.textContent = `${hostInfo.stream.source} | ${hostInfo.stream.width}x${hostInfo.stream.height} @ ${hostInfo.stream.fps}fps`;
         renderHealthSummary(hostInfo);
         remoteCursor = null;
+        lastRemoteCursor = null;
         hideRemoteCursorIndicator();
       }
 
@@ -2210,6 +2212,23 @@
         return mapPointerEvent({ clientX, clientY });
       }
 
+      function defaultRemoteCursor() {
+        return {
+          x: Math.round((hostInfo ? hostInfo.stream.width - 1 : 0) / 2),
+          y: Math.round((hostInfo ? hostInfo.stream.height - 1 : 0) / 2),
+        };
+      }
+
+      function setRemoteCursor(point, { send = true } = {}) {
+        remoteCursor = clampRemoteCursor(point);
+        lastRemoteCursor = remoteCursor;
+        if (send) {
+          pushInputEvent({ type: 'mouse_move', x: remoteCursor.x, y: remoteCursor.y });
+        }
+        renderRemoteCursorIndicator();
+        return remoteCursor;
+      }
+
       function hideRemoteCursorIndicator() {
         remoteCursorIndicator.classList.remove('visible');
       }
@@ -2243,26 +2262,17 @@
           return remoteCursor;
         }
         const mapped = mapClientPoint(clientX, clientY);
-        remoteCursor = mapped || {
-          x: Math.round((hostInfo ? hostInfo.stream.width : 1) / 2),
-          y: Math.round((hostInfo ? hostInfo.stream.height : 1) / 2),
-        };
-        remoteCursor = clampRemoteCursor(remoteCursor);
-        pushInputEvent({ type: 'mouse_move', x: remoteCursor.x, y: remoteCursor.y });
-        renderRemoteCursorIndicator();
-        return remoteCursor;
+        return setRemoteCursor(mapped || lastRemoteCursor || defaultRemoteCursor());
       }
 
       function moveRemoteCursorBy(deltaX, deltaY) {
         if (!remoteCursor) {
-          ensureRemoteCursor(0, 0);
+          setRemoteCursor(lastRemoteCursor || defaultRemoteCursor(), { send: false });
         }
-        remoteCursor = clampRemoteCursor({
+        return setRemoteCursor({
           x: remoteCursor.x + (deltaX * touchPointerScale),
           y: remoteCursor.y + (deltaY * touchPointerScale),
         });
-        pushInputEvent({ type: 'mouse_move', x: remoteCursor.x, y: remoteCursor.y });
-        renderRemoteCursorIndicator();
       }
 
       function sendMouseClick(button) {
@@ -2542,8 +2552,7 @@
           x: mapped.x,
           y: mapped.y,
         });
-        remoteCursor = mapped;
-        renderRemoteCursorIndicator();
+        setRemoteCursor(mapped);
       });
 
       controlSurface.addEventListener('mousedown', (event) => {
@@ -2558,8 +2567,7 @@
             x: mapped.x,
             y: mapped.y,
           });
-          remoteCursor = mapped;
-          renderRemoteCursorIndicator();
+          setRemoteCursor(mapped);
         }
         const button = mapMouseButton(event.button);
         if (!button) {
