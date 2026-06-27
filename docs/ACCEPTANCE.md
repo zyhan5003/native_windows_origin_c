@@ -51,3 +51,4 @@ python -m screen_windows bench-encode
 - 2026-06-27：`bench-encode` 支持按配置/宽高/FPS/帧数输出 JSON，便于真实机器记录编码门禁。
 - 2026-06-27：`auth_ok.file_transfer` 下发 `chunk_size/max_file_size`，Web UI 上传按服务端限制分片并预拦截超限文件。
 - 2026-06-27：Web UI 远控失焦、鼠标离开或停用控制时会释放已按下的键盘/鼠标状态，降低卡键风险。
+- 2026-06-27：Web UI 控制通道重连会忽略旧 socket 的迟到 close/message，避免旧会话覆盖新预览状态。

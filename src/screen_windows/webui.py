@@ -777,10 +777,11 @@ INDEX_HTML = """<!doctype html>
           await closingConnection.close();
           if (peerConnection === closingConnection) {
             peerConnection = null;
+            remoteVideo.srcObject = null;
+            controlBtn.disabled = true;
           }
+          return;
         }
-        remoteVideo.srcObject = null;
-        controlBtn.disabled = true;
       }
 
       function scheduleSignalReconnect() {
@@ -888,9 +889,12 @@ INDEX_HTML = """<!doctype html>
         }
 
         socket.addEventListener('close', () => {
-          if (signalSocket === socket) {
-            signalSocket = null;
+          if (signalSocket !== socket) {
+            // 重连竞态下旧 socket 的 close 不能覆盖新会话状态。
+            logSignal('stale close ignored');
+            return;
           }
+          signalSocket = null;
           signalReady = false;
           rejectPendingSignalReady(new Error('signal socket closed'));
           stopControlPingReporter();
@@ -911,6 +915,10 @@ INDEX_HTML = """<!doctype html>
         });
 
         socket.addEventListener('message', async (event) => {
+          if (signalSocket !== socket) {
+            logSignal('stale message ignored');
+            return;
+          }
           const payload = JSON.parse(event.data);
           logSignal('message', payload);
 

@@ -43,3 +43,10 @@ def test_webui_releases_pressed_inputs_on_focus_loss() -> None:
     assert "sendKey(event.code, false)" in INDEX_HTML
     assert "controlSurface.addEventListener('mouseleave'" in INDEX_HTML
     assert "window.addEventListener('blur'" in INDEX_HTML
+
+
+def test_webui_ignores_stale_signal_socket_events() -> None:
+    assert "if (signalSocket !== socket) {" in INDEX_HTML
+    assert "stale close ignored" in INDEX_HTML
+    assert "stale message ignored" in INDEX_HTML
+    assert "if (peerConnection === closingConnection) {" in INDEX_HTML
