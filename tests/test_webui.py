@@ -123,3 +123,12 @@ def test_webui_uses_touchpad_style_mobile_control() -> None:
     assert "remoteCursor.x + (deltaX * touchPointerScale)" in INDEX_HTML
     assert "手机使用触摸板模式" in INDEX_HTML
     assert "sendMouseClick(touchState.count >= 2 ? 'right' : 'left')" in INDEX_HTML
+
+
+def test_webui_shows_remote_cursor_indicator_for_touchpad_control() -> None:
+    assert 'id="remoteCursorIndicator"' in INDEX_HTML
+    assert ".remote-cursor.visible" in INDEX_HTML
+    assert "function renderRemoteCursorIndicator()" in INDEX_HTML
+    assert "remoteCursorIndicator.style.transform" in INDEX_HTML
+    assert "renderRemoteCursorIndicator();" in INDEX_HTML
+    assert "hideRemoteCursorIndicator();" in INDEX_HTML

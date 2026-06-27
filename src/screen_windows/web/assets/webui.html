@@ -395,6 +395,36 @@
       .video-stage.control-armed {
         box-shadow: 0 0 0 2px rgba(136, 240, 109, 0.95), 0 0 0 10px rgba(136, 240, 109, 0.08);
       }
+      .remote-cursor {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 20;
+        width: 28px;
+        height: 28px;
+        border: 2px solid rgba(10, 17, 22, 0.88);
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.98) 0 22%, rgba(136, 240, 109, 0.96) 24% 48%, rgba(136, 240, 109, 0.12) 50% 100%);
+        box-shadow: 0 0 0 5px rgba(136, 240, 109, 0.22), 0 10px 26px rgba(0, 0, 0, 0.46);
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-9999px, -9999px) scale(0.86);
+        transition: opacity 120ms ease, transform 80ms linear;
+      }
+      .remote-cursor.visible {
+        opacity: 1;
+      }
+      .remote-cursor::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 2px;
+        height: 38px;
+        background: rgba(255, 255, 255, 0.58);
+        transform: translate(-50%, -50%) rotate(45deg);
+      }
       .video-stage.fit-cover video {
         object-fit: cover;
       }
@@ -613,6 +643,7 @@
           </div>
           <div id="controlSurface" class="video-stage" tabindex="0">
             <video id="remoteVideo" autoplay playsinline muted></video>
+            <div id="remoteCursorIndicator" class="remote-cursor" aria-hidden="true"></div>
             <div class="overlay" id="videoOverlay">等待连接</div>
           </div>
         </section>
@@ -810,6 +841,7 @@
       const stageStatusEl = document.getElementById('stageStatus');
       const remoteVideo = document.getElementById('remoteVideo');
       const controlSurface = document.getElementById('controlSurface');
+      const remoteCursorIndicator = document.getElementById('remoteCursorIndicator');
       const connectBtn = document.getElementById('connectBtn');
       const streamBtn = document.getElementById('streamBtn');
       const controlBtn = document.getElementById('controlBtn');
@@ -876,6 +908,11 @@
         controlSurface.classList.toggle('control-armed', active);
         controlBtn.textContent = active ? '停止键鼠控制' : '3. 启用键鼠控制';
         controlStatusEl.innerHTML = active ? `<em>${message}</em>` : message;
+        if (!active) {
+          hideRemoteCursorIndicator();
+        } else {
+          renderRemoteCursorIndicator();
+        }
         if (active) {
           controlSurface.focus();
         }
@@ -1087,6 +1124,8 @@
         };
         overlayEl.textContent = `${hostInfo.stream.source} | ${hostInfo.stream.width}x${hostInfo.stream.height} @ ${hostInfo.stream.fps}fps`;
         renderHealthSummary(hostInfo);
+        remoteCursor = null;
+        hideRemoteCursorIndicator();
       }
 
       function applyQualityPresetToControls() {
@@ -2171,6 +2210,25 @@
         return mapPointerEvent({ clientX, clientY });
       }
 
+      function hideRemoteCursorIndicator() {
+        remoteCursorIndicator.classList.remove('visible');
+      }
+
+      function renderRemoteCursorIndicator() {
+        if (!controlActive || !remoteCursor || !hostInfo) {
+          hideRemoteCursorIndicator();
+          return;
+        }
+
+        const rect = getVideoContentRect();
+        const width = Math.max(hostInfo.stream.width - 1, 1);
+        const height = Math.max(hostInfo.stream.height - 1, 1);
+        const left = rect.left + ((remoteCursor.x / width) * rect.width);
+        const top = rect.top + ((remoteCursor.y / height) * rect.height);
+        remoteCursorIndicator.style.transform = `translate(${left - 14}px, ${top - 14}px)`;
+        remoteCursorIndicator.classList.add('visible');
+      }
+
       function clampRemoteCursor(point) {
         const width = hostInfo ? hostInfo.stream.width : 1;
         const height = hostInfo ? hostInfo.stream.height : 1;
@@ -2191,6 +2249,7 @@
         };
         remoteCursor = clampRemoteCursor(remoteCursor);
         pushInputEvent({ type: 'mouse_move', x: remoteCursor.x, y: remoteCursor.y });
+        renderRemoteCursorIndicator();
         return remoteCursor;
       }
 
@@ -2203,6 +2262,7 @@
           y: remoteCursor.y + (deltaY * touchPointerScale),
         });
         pushInputEvent({ type: 'mouse_move', x: remoteCursor.x, y: remoteCursor.y });
+        renderRemoteCursorIndicator();
       }
 
       function sendMouseClick(button) {
@@ -2483,6 +2543,7 @@
           y: mapped.y,
         });
         remoteCursor = mapped;
+        renderRemoteCursorIndicator();
       });
 
       controlSurface.addEventListener('mousedown', (event) => {
@@ -2498,6 +2559,7 @@
             y: mapped.y,
           });
           remoteCursor = mapped;
+          renderRemoteCursorIndicator();
         }
         const button = mapMouseButton(event.button);
         if (!button) {
@@ -2520,6 +2582,7 @@
 
       controlSurface.addEventListener('mouseleave', () => {
         releasePressedInputs();
+        hideRemoteCursorIndicator();
       });
 
       controlSurface.addEventListener('wheel', (event) => {
@@ -2545,6 +2608,7 @@
       controlSurface.addEventListener('touchcancel', (event) => {
         event.preventDefault();
         touchState = null;
+        hideRemoteCursorIndicator();
         releasePressedInputs();
       }, { passive: false });
 
