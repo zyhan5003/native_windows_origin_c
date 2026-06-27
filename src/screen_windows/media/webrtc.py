@@ -20,7 +20,7 @@ from .video_source import FrameSource
 LOGGER = logging.getLogger(__name__)
 VIDEO_CLOCK_HZ = 90_000
 STATIC_MOTION_RATIO_THRESHOLD = 0.01
-STATIC_EFFECTIVE_FPS = 5
+STATIC_EFFECTIVE_FPS = 12
 
 
 @dataclass(frozen=True, slots=True)

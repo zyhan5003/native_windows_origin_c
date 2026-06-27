@@ -221,6 +221,42 @@ def test_runtime_h264_encoder_falls_back_to_libx264(monkeypatch) -> None:
     assert "qsv unavailable" in runtime.status.fallback_reason
 
 
+def test_runtime_h264_encoder_keeps_codec_on_bitrate_change(monkeypatch) -> None:
+    import screen_windows.media.webrtc_encoder as module
+
+    created: list[object] = []
+
+    class FakeCodec:
+        width = 320
+        height = 180
+        bit_rate = 500_000
+
+        def encode(self, frame):
+            return [b"\x00\x00\x00\x01\x65test"]
+
+    def fake_create(encoder_name: str, **kwargs):
+        codec = FakeCodec()
+        codec.width = kwargs["frame"].width
+        codec.height = kwargs["frame"].height
+        codec.bit_rate = kwargs["target_bitrate"]
+        created.append(codec)
+        return codec
+
+    monkeypatch.setattr(module, "_create_h264_codec", fake_create)
+    encoder = RuntimeH264Encoder(None)
+    encoder.target_bitrate = 500_000
+
+    encoder.encode(_black_video_frame(width=320, height=180))
+    encoder.target_bitrate = 1_200_000
+    encoder.encode(_black_video_frame(width=320, height=180))
+    encoder.encode(_black_video_frame(width=640, height=360))
+
+    assert len(created) == 2
+    assert created[0].bit_rate == 1_200_000
+    assert created[1].width == 640
+    assert created[1].height == 360
+
+
 def _black_video_frame(*, width: int, height: int) -> av.VideoFrame:
     frame = av.VideoFrame.from_ndarray(
         np.zeros((height, width, 3), dtype=np.uint8),

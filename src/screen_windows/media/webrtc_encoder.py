@@ -147,7 +147,6 @@ class RuntimeH264Encoder(H264Encoder):
         if self.codec and (
             frame.width != self.codec.width
             or frame.height != self.codec.height
-            or abs(self.target_bitrate - self.codec.bit_rate) / self.codec.bit_rate > 0.1
         ):
             self.buffer_data = b""
             self.buffer_pts = None
@@ -166,6 +165,9 @@ class RuntimeH264Encoder(H264Encoder):
             )
             if self._runtime is not None:
                 self._runtime.mark_active(self._encoder_name, self._backend)
+        elif self.codec and self.target_bitrate > 0:
+            # 移动端解码器对频繁重开 H264 编码器更敏感；码率波动只更新参数，避免画面闪动。
+            self.codec.bit_rate = self.target_bitrate
 
         data_to_send = b""
         for package in self.codec.encode(frame):
