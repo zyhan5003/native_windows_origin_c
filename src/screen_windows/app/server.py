@@ -11,6 +11,7 @@ import time
 from typing import Any
 
 from aiohttp import web
+from websockets.exceptions import ConnectionClosed
 from websockets.asyncio.server import Server, ServerConnection, serve
 
 from .config import AppConfig
@@ -339,6 +340,9 @@ class HostServer:
                     continue
 
                 await self._process_control_message(ws, session, payload)
+        except ConnectionClosed:
+            # 浏览器主动断开时，服务端可能正准备回 ACK；这是正常生命周期，不应刷 traceback。
+            pass
         finally:
             if session.peer_session is not None:
                 await self._close_peer_session(session.peer_session)

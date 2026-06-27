@@ -6,6 +6,7 @@ from aiohttp.test_utils import TestClient, TestServer
 import base64
 import json
 from aiortc import RTCPeerConnection, RTCSessionDescription
+from websockets.exceptions import ConnectionClosedOK
 from websockets.asyncio.client import connect
 
 from screen_windows.control.clipboard import ClipboardService, RecordingClipboardBackend
@@ -98,6 +99,30 @@ async def _test_closed_webrtc_session_is_removed_from_runtime_stats() -> None:
     assert peer_session.closed is True
     assert runtime["active_webrtc_sessions"] == 0
     assert runtime["webrtc"]["sessions"] == []
+
+
+def test_websocket_connection_closed_during_send_is_quiet(monkeypatch) -> None:
+    asyncio.run(_test_websocket_connection_closed_during_send_is_quiet(monkeypatch))
+
+
+async def _test_websocket_connection_closed_during_send_is_quiet(monkeypatch) -> None:
+    host = HostServer(AppConfig(auth=AuthConfig(pin="123456")), clipboard_service=build_recording_clipboard())
+
+    async def closed_control_message(ws, session, payload) -> None:
+        raise ConnectionClosedOK(None, None, None)
+
+    monkeypatch.setattr(host, "_process_control_message", closed_control_message)
+    ws = FakeWebSocket(
+        [
+            {"type": "auth", "version": "0.1.0", "pin": "123456"},
+            {"type": "ping", "t": 1},
+        ]
+    )
+
+    await host._handle_websocket_connection(ws)  # type: ignore[arg-type]
+
+    assert ws.sent[0]["type"] == "auth_ok"
+    assert host._state.authenticated_clients == 0
 
 
 def test_http_file_list_and_download(tmp_path) -> None:
@@ -1201,3 +1226,20 @@ async def _test_webrtc_runtime_uses_selected_hardware_encoder_when_available() -
     finally:
         await client_pc.close()
         await host.shutdown()
+
+
+class FakeWebSocket:
+    def __init__(self, messages: list[dict]) -> None:
+        self._messages = [json.dumps(message) for message in messages]
+        self.sent: list[dict] = []
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> str:
+        if not self._messages:
+            raise StopAsyncIteration
+        return self._messages.pop(0)
+
+    async def send(self, message: str) -> None:
+        self.sent.append(json.loads(message))
