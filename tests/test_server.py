@@ -549,7 +549,7 @@ async def _test_websocket_stats_returns_runtime_snapshot() -> None:
             assert stats_message["type"] == "stats"
             assert stats_message["runtime"]["system"]["pid"] > 0
             assert stats_message["runtime"]["webrtc"]["sessions"] == []
-            assert stats_message["runtime"]["quality"]["profile"]["key"] == "standard"
+            assert stats_message["runtime"]["quality"]["profile"]["key"] == "eco"
             assert "input" in stats_message["runtime"]
             assert "file_transfer" in stats_message["runtime"]
     finally:

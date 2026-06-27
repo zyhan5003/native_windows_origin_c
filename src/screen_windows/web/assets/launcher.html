@@ -581,7 +581,7 @@
                   <option value="1024x576">1024x576 弱网</option>
                   <option value="custom">自定义</option>
                 </select>
-                <small>手机上建议 1280x720 或 1600x900 起步。</small>
+                <small>手机稳定优先建议 1280x720 起步，确认稳定后再升高。</small>
               </label>
               <label class="field">
                 <span>FPS</span>
@@ -592,12 +592,12 @@
                   <option value="45">45 更顺滑</option>
                   <option value="60">60 高性能</option>
                 </select>
-                <small>远程办公 24/30 足够，游戏或拖动画面可升高。</small>
+                <small>手机长时间使用建议 24，确认稳定后再升到 30。</small>
               </label>
               <label class="field">
                 <span>码率 Mbps</span>
-                <input name="bitrate_mbps" type="number" min="0.1" max="100" step="0.1" value="10" />
-                <small>越高越清晰，但网络和编码压力也更高。</small>
+                <input name="bitrate_mbps" type="number" min="0.1" max="100" step="0.1" value="2" />
+                <small>手机稳定优先用 2-5Mbps，越高越容易增加解码和网络压力。</small>
               </label>
             </div>
             <div id="customResolution" class="grid" style="display: none; margin-top: 14px;">
@@ -686,21 +686,21 @@
                 <label class="field">
                   <span>质量模式</span>
                   <select name="quality_mode">
-                    <option value="auto">自动调节</option>
                     <option value="manual">固定档位</option>
+                    <option value="auto">自动调节</option>
                   </select>
-                  <small>自动会根据网络信号升降档。</small>
+                  <small>手机长稳优先固定档位，避免自动升降档触发画面重连。</small>
                 </label>
                 <label class="field">
                   <span>质量档位</span>
                   <select name="quality_profile">
+                    <option value="eco">节能</option>
                     <option value="standard">标准</option>
                     <option value="fast">高速</option>
                     <option value="turbo">极速</option>
-                    <option value="eco">节能</option>
                     <option value="limit">极限弱网</option>
                   </select>
-                  <small>手动模式下固定使用该档位。</small>
+                  <small>手机建议先用节能 720p24 / 2M，稳定后再升档。</small>
                 </label>
                 <label class="field">
                   <span>编码预设</span>

@@ -83,8 +83,8 @@ async def _test_source_video_track_downscales_to_quality_profile() -> None:
     assert frame.time_base.denominator == VIDEO_CLOCK_HZ
     assert stats.frames_sent == 2
     assert stats.target_profile == "eco"
-    assert stats.target_fps == 30
-    assert stats.effective_fps == 30
+    assert stats.target_fps == 24
+    assert stats.effective_fps == 24
     assert stats.target_bitrate_mbps == 2.0
     assert stats.last_width == 1280
     assert stats.last_height == 720

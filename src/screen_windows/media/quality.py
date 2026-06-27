@@ -64,7 +64,7 @@ QUALITY_PROFILES: dict[str, QualityProfile] = {
     "eco": QualityProfile(
         key="eco",
         name="节能",
-        fps=30,
+        fps=24,
         width=1280,
         height=720,
         bitrate_mbps=2.0,

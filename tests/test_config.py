@@ -27,8 +27,8 @@ def test_load_config_defaults_when_missing(tmp_path: Path) -> None:
     assert config.encoder.preset == "p1"
     assert config.auth.token_store_path == default_token_store_path()
     assert config.file_transfer.receive_dir == default_receive_dir_path()
-    assert config.quality.mode == "auto"
-    assert config.quality.profile == "standard"
+    assert config.quality.mode == "manual"
+    assert config.quality.profile == "eco"
 
 
 def test_default_token_store_path_uses_appdata(monkeypatch) -> None:

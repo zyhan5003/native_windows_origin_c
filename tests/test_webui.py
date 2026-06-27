@@ -97,6 +97,8 @@ def test_webui_exposes_manual_resolution_fps_and_bitrate_controls() -> None:
     assert "function qualityProfileKey(profile)" in INDEX_HTML
     assert "function applyStreamState(stream)" in INDEX_HTML
     assert "applyStreamState(payload.stream)" in INDEX_HTML
+    assert '<option value="eco" selected>节能 720p24 / 2M</option>' in INDEX_HTML
+    assert "eco: { width: 1280, height: 720, fps: 24, bitrate: 2 }" in INDEX_HTML
 
 
 def test_webui_has_preview_lifecycle_and_view_controls() -> None:

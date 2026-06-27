@@ -73,6 +73,14 @@ def test_launcher_copy_button_falls_back_without_clipboard_api() -> None:
     assert "复制失败，请手动复制" in LAUNCHER_HTML
 
 
+def test_launcher_defaults_to_mobile_stability_guidance() -> None:
+    assert '<input name="bitrate_mbps" type="number" min="0.1" max="100" step="0.1" value="2" />' in LAUNCHER_HTML
+    assert '<option value="manual">固定档位</option>' in LAUNCHER_HTML
+    assert '<option value="eco">节能</option>' in LAUNCHER_HTML
+    assert "手机长稳优先固定档位" in LAUNCHER_HTML
+    assert "手机建议先用节能 720p24 / 2M" in LAUNCHER_HTML
+
+
 def test_launcher_state_starts_and_stops_host(tmp_path: Path) -> None:
     asyncio.run(_test_launcher_state_starts_and_stops_host(tmp_path))
 

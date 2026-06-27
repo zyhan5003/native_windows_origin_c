@@ -61,8 +61,8 @@ class FileTransferConfig:
 
 @dataclass(frozen=True, slots=True)
 class QualityConfig:
-    mode: str = "auto"
-    profile: str = "standard"
+    mode: str = "manual"
+    profile: str = "eco"
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,8 +150,8 @@ def load_config(path: str | Path | None = None) -> AppConfig:
             chunk_size=int(file_transfer_raw.get("chunk_size", 64 * 1024)),
         ),
         quality=QualityConfig(
-            mode=str(quality_raw.get("mode", "auto")),
-            profile=str(quality_raw.get("profile", "standard")),
+            mode=str(quality_raw.get("mode", "manual")),
+            profile=str(quality_raw.get("profile", "eco")),
         ),
     )
 
