@@ -23,3 +23,11 @@ def test_webui_renders_video_performance_stats() -> None:
     assert "video.motion_ratio" in INDEX_HTML
     assert "video.capture_ms" in INDEX_HTML
     assert "system.cpu_percent" in INDEX_HTML
+
+
+def test_webui_uses_server_file_transfer_limits() -> None:
+    assert "function updateFileTransferLimits(limits)" in INDEX_HTML
+    assert "updateFileTransferLimits(payload.file_transfer)" in INDEX_HTML
+    assert "file.size > fileTransferLimits.maxFileSize" in INDEX_HTML
+    assert "chunkSize: fileTransferLimits.chunkSize" in INDEX_HTML
+    assert INDEX_HTML.count("chunkSize: 64 * 1024") == 1

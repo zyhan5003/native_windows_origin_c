@@ -37,6 +37,7 @@ def build_auth_ok(
     selected_monitor: int | None = None,
     clipboard_enabled: bool = False,
     file_transfer_enabled: bool = False,
+    file_transfer_limits: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     return {
         "type": "auth_ok",
@@ -58,6 +59,7 @@ def build_auth_ok(
             "http": http_port,
             "ws": ws_port,
         },
+        "file_transfer": file_transfer_limits or {},
     }
 
 

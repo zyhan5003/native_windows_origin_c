@@ -407,6 +407,10 @@ class HostServer:
             selected_monitor=self._display_info.selected_monitor,
             clipboard_enabled=True,
             file_transfer_enabled=True,
+            file_transfer_limits={
+                "chunk_size": self._file_transfer_service.chunk_size,
+                "max_file_size": self._file_transfer_service.max_file_size,
+            },
         )
 
     async def _process_control_message(

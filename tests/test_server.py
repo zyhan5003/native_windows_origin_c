@@ -680,6 +680,10 @@ async def _test_file_upload_chunks_are_written_and_acknowledged(tmp_path) -> Non
             auth_message = json.loads(await ws.recv())
             assert auth_message["type"] == "auth_ok"
             assert auth_message["capabilities"]["file_transfer"] is True
+            assert auth_message["file_transfer"] == {
+                "chunk_size": file_transfer.chunk_size,
+                "max_file_size": file_transfer.max_file_size,
+            }
 
             await ws.send(
                 json.dumps(

@@ -455,6 +455,10 @@ INDEX_HTML = """<!doctype html>
       let inputSequence = 0;
       let pendingInputEvents = [];
       let activeFileUpload = null;
+      let fileTransferLimits = {
+        chunkSize: 64 * 1024,
+        maxFileSize: 512 * 1024 * 1024,
+      };
       let fileAccessTicket = '';
       let fileAccessExpiresAt = 0;
       let fileAccessPromise = null;
@@ -544,6 +548,20 @@ INDEX_HTML = """<!doctype html>
         fileUploadBtn.disabled = !enabled;
         fileRefreshBtn.disabled = !enabled;
         fileStatusEl.innerHTML = enabled ? `<em>${message}</em>` : message;
+      }
+
+      function updateFileTransferLimits(limits) {
+        if (!limits) {
+          return;
+        }
+        const chunkSize = Number(limits.chunk_size);
+        const maxFileSize = Number(limits.max_file_size);
+        if (Number.isFinite(chunkSize) && chunkSize > 0) {
+          fileTransferLimits.chunkSize = chunkSize;
+        }
+        if (Number.isFinite(maxFileSize) && maxFileSize >= 0) {
+          fileTransferLimits.maxFileSize = maxFileSize;
+        }
       }
 
       function formatBytes(size) {
@@ -898,6 +916,7 @@ INDEX_HTML = """<!doctype html>
             streamBtn.disabled = false;
             updateClipboardControls(Boolean(payload.capabilities && payload.capabilities.clipboard), '可同步');
             updateFileControls(Boolean(payload.capabilities && payload.capabilities.file_transfer), '可上传');
+            updateFileTransferLimits(payload.file_transfer);
             updateQualityControls(Boolean(payload.capabilities && payload.capabilities.quality), '可调节');
             renderDisplayInfo(payload.display_info);
             updateSessionStatus('控制会话已认证', true);
@@ -1687,11 +1706,15 @@ INDEX_HTML = """<!doctype html>
           fileStatusEl.textContent = '未选择文件';
           return;
         }
+        if (file.size > fileTransferLimits.maxFileSize) {
+          fileStatusEl.textContent = `文件超过上限: ${formatBytes(fileTransferLimits.maxFileSize)}`;
+          return;
+        }
         await openSignalSession();
         activeFileUpload = {
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           file,
-          chunkSize: 64 * 1024,
+          chunkSize: fileTransferLimits.chunkSize,
         };
         fileUploadBtn.disabled = true;
         fileStatusEl.innerHTML = '<em>正在准备...</em>';
