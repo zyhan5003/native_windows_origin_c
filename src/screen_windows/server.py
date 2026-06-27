@@ -16,7 +16,7 @@ from websockets.asyncio.server import Server, ServerConnection, serve
 from .auth import TokenManager, TokenStore
 from .clipboard import ClipboardService, WindowsClipboardBackend
 from .config import AppConfig
-from .display import enumerate_displays
+from .display import DisplayMonitor, enumerate_displays
 from .discovery import DiscoveryAnnouncement, DiscoveryManager
 from .encoder import EncoderManager
 from .filetransfer import FileTransferError, FileTransferService
@@ -114,10 +114,8 @@ class HostServer:
         )
         self._peer_sessions: set[WebRtcSession] = set()
         self._input_executor_injected = input_executor is not None
-        self._input_executor = input_executor or WindowsInputExecutor(
-            display_width=self._frame_source.width,
-            display_height=self._frame_source.height,
-        )
+        input_bounds = self._build_input_bounds()
+        self._input_executor = input_executor or WindowsInputExecutor(**input_bounds)
         self._clipboard_service = clipboard_service or ClipboardService(
             backend=WindowsClipboardBackend(),
             backend_name="win32",
@@ -600,7 +598,7 @@ class HostServer:
         )
         self._frame_source = await asyncio.to_thread(build_frame_source, self._config.stream)
         self._display_info = enumerate_displays(self._config.stream)
-        self._update_input_display_size(self._frame_source.width, self._frame_source.height)
+        self._update_input_display_bounds()
         return build_display_state(
             self._display_info.to_dict(),
             stream={
@@ -612,15 +610,35 @@ class HostServer:
             },
         )
 
-    def _update_input_display_size(self, width: int, height: int) -> None:
+    def _update_input_display_bounds(self) -> None:
+        input_bounds = self._build_input_bounds()
         if self._input_executor_injected:
-            self._input_executor.display_width = width
-            self._input_executor.display_height = height
+            for key, value in input_bounds.items():
+                setattr(self._input_executor, key, value)
             return
-        self._input_executor = WindowsInputExecutor(
-            display_width=width,
-            display_height=height,
+        self._input_executor = WindowsInputExecutor(**input_bounds)
+
+    def _build_input_bounds(self) -> dict[str, int]:
+        monitor = self._selected_monitor()
+        virtual_left, virtual_top, virtual_width, virtual_height = _virtual_desktop_bounds(
+            self._display_info.monitors,
         )
+        return {
+            "display_width": self._frame_source.width,
+            "display_height": self._frame_source.height,
+            "display_left": monitor.left,
+            "display_top": monitor.top,
+            "virtual_left": virtual_left,
+            "virtual_top": virtual_top,
+            "virtual_width": virtual_width,
+            "virtual_height": virtual_height,
+        }
+
+    def _selected_monitor(self) -> DisplayMonitor:
+        selected = self._display_info.selected_monitor
+        if 0 <= selected < len(self._display_info.monitors):
+            return self._display_info.monitors[selected]
+        return self._display_info.monitors[0]
 
     async def _process_file_request(
         self,
@@ -766,3 +784,11 @@ class HostServer:
             await self._web_runner.cleanup()
             self._web_runner = None
             self._http_site = None
+
+
+def _virtual_desktop_bounds(monitors: list[DisplayMonitor]) -> tuple[int, int, int, int]:
+    left = min(monitor.left for monitor in monitors)
+    top = min(monitor.top for monitor in monitors)
+    right = max(monitor.left + monitor.width for monitor in monitors)
+    bottom = max(monitor.top + monitor.height for monitor in monitors)
+    return left, top, max(right - left, 1), max(bottom - top, 1)

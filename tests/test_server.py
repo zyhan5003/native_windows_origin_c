@@ -558,6 +558,12 @@ async def _test_display_switch_updates_monitor_and_input_size(monkeypatch) -> No
             assert display_message["stream"]["monitor"] == 1
             assert executor.display_width == 800
             assert executor.display_height == 450
+            assert executor.display_left == 640
+            assert executor.display_top == 0
+            assert executor.virtual_left == 0
+            assert executor.virtual_top == 0
+            assert executor.virtual_width == 1440
+            assert executor.virtual_height == 450
     finally:
         await host.shutdown()
 

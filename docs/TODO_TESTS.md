@@ -10,7 +10,7 @@
 8. 认证模式：Chrome 验证 `auth.mode = "none"` 无需 PIN，`auth.mode = "always"` 禁止 token 复用。
 9. Stats 长稳：Chrome 确认 WS stats、`/api/health.runtime` 和媒体状态面板的系统/视频/AQE 数据持续一致。
 10. 多显示器：真实 Windows 多显示器环境确认 `auth_ok.display_info.monitors` 与 `/api/health.stream.display` 一致。
-11. 显示器切换：Chrome 调用 `display_switch` 后重新启动预览，确认画面源和输入坐标基准切到目标显示器。
+11. 显示器切换：真实多屏下 Chrome 调用 `display_switch` 后重启预览，确认画面源和鼠标落点切到目标显示器。
 12. 移动端触控：手机/平板验证单指移动/点击、双指右键、双指滚轮映射到受控端。
 13. 断线重连：Chrome 预览中重启/断开主机，确认 token 自动重连并重建视频预览。
 14. 编码门禁：真实目标机器记录 `python -m screen_windows info --json` 与 `bench-encode` 输出。

@@ -24,6 +24,7 @@ MOUSEEVENTF_MIDDLEDOWN = 0x0020
 MOUSEEVENTF_MIDDLEUP = 0x0040
 MOUSEEVENTF_WHEEL = 0x0800
 MOUSEEVENTF_ABSOLUTE = 0x8000
+MOUSEEVENTF_VIRTUALDESK = 0x4000
 
 MAPVK_VK_TO_VSC = 0
 WHEEL_DELTA = 120
@@ -206,6 +207,12 @@ class InputBatch:
 class InputExecutor(Protocol):
     display_width: int
     display_height: int
+    display_left: int
+    display_top: int
+    virtual_left: int
+    virtual_top: int
+    virtual_width: int
+    virtual_height: int
 
     def execute_batch(self, batch: InputBatch) -> None:
         ...
@@ -215,11 +222,34 @@ class InputExecutor(Protocol):
 class RecordingInputExecutor:
     display_width: int
     display_height: int
+    display_left: int
+    display_top: int
+    virtual_left: int
+    virtual_top: int
+    virtual_width: int
+    virtual_height: int
     applied_batches: list[InputBatch]
 
-    def __init__(self, display_width: int, display_height: int) -> None:
+    def __init__(
+        self,
+        display_width: int,
+        display_height: int,
+        *,
+        display_left: int = 0,
+        display_top: int = 0,
+        virtual_left: int = 0,
+        virtual_top: int = 0,
+        virtual_width: int | None = None,
+        virtual_height: int | None = None,
+    ) -> None:
         self.display_width = display_width
         self.display_height = display_height
+        self.display_left = display_left
+        self.display_top = display_top
+        self.virtual_left = virtual_left
+        self.virtual_top = virtual_top
+        self.virtual_width = virtual_width or display_width
+        self.virtual_height = virtual_height or display_height
         self.applied_batches = []
 
     def execute_batch(self, batch: InputBatch) -> None:
@@ -229,9 +259,26 @@ class RecordingInputExecutor:
 class WindowsInputExecutor:
     """使用 SendInput 执行远程输入事件。"""
 
-    def __init__(self, display_width: int, display_height: int) -> None:
+    def __init__(
+        self,
+        display_width: int,
+        display_height: int,
+        *,
+        display_left: int = 0,
+        display_top: int = 0,
+        virtual_left: int = 0,
+        virtual_top: int = 0,
+        virtual_width: int | None = None,
+        virtual_height: int | None = None,
+    ) -> None:
         self.display_width = max(display_width, 1)
         self.display_height = max(display_height, 1)
+        self.display_left = display_left
+        self.display_top = display_top
+        self.virtual_left = virtual_left
+        self.virtual_top = virtual_top
+        self.virtual_width = max(virtual_width or self.display_width, 1)
+        self.virtual_height = max(virtual_height or self.display_height, 1)
         self._user32 = ctypes.windll.user32
 
     def execute_batch(self, batch: InputBatch) -> None:
@@ -259,15 +306,21 @@ class WindowsInputExecutor:
             raise OSError("SendInput failed")
 
     def _send_mouse_move(self, x: int, y: int) -> None:
-        normalized_x = int(round((max(0, min(x, self.display_width - 1)) * 65535) / max(self.display_width - 1, 1)))
-        normalized_y = int(round((max(0, min(y, self.display_height - 1)) * 65535) / max(self.display_height - 1, 1)))
+        local_x = max(0, min(x, self.display_width - 1))
+        local_y = max(0, min(y, self.display_height - 1))
+        absolute_x = self.display_left + local_x
+        absolute_y = self.display_top + local_y
+        virtual_x = absolute_x - self.virtual_left
+        virtual_y = absolute_y - self.virtual_top
+        normalized_x = int(round((max(0, min(virtual_x, self.virtual_width - 1)) * 65535) / max(self.virtual_width - 1, 1)))
+        normalized_y = int(round((max(0, min(virtual_y, self.virtual_height - 1)) * 65535) / max(self.virtual_height - 1, 1)))
         input_item = INPUT(
             type=INPUT_MOUSE,
             mi=MOUSEINPUT(
                 dx=normalized_x,
                 dy=normalized_y,
                 mouseData=0,
-                dwFlags=MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE,
+                dwFlags=MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
                 time=0,
                 dwExtraInfo=0,
             ),

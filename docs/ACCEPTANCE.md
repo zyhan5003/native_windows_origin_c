@@ -44,3 +44,4 @@ python -m screen_windows bench-encode
 - 2026-06-27：Host Ctrl+C 停止不再输出 traceback，真实终端只显示 `screen_windows host stopped`。
 - 2026-06-27：Web UI 失效 token 会清除本地令牌并暂停自动重连，提示重新输入 PIN。
 - 2026-06-27：`/api/health.runtime` 与 WS `{type:"stats"}.runtime` 使用同形快照，便于长稳对账。
+- 2026-06-27：显示器切换会同步更新输入坐标基准；SendInput 鼠标绝对坐标按虚拟桌面边界映射。
