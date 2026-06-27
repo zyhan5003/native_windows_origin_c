@@ -156,7 +156,12 @@ def test_webui_uses_touchpad_style_mobile_control() -> None:
 def test_webui_shows_remote_cursor_indicator_for_touchpad_control() -> None:
     assert 'id="remoteCursorIndicator"' in INDEX_HTML
     assert ".remote-cursor.visible" in INDEX_HTML
+    assert "function ensureVisibleRemoteCursor()" in INDEX_HTML
+    assert "ensureVisibleRemoteCursor();" in INDEX_HTML
     assert "function renderRemoteCursorIndicator()" in INDEX_HTML
     assert "remoteCursorIndicator.style.transform" in INDEX_HTML
     assert "renderRemoteCursorIndicator();" in INDEX_HTML
     assert "hideRemoteCursorIndicator();" in INDEX_HTML
+    assert "function migrateRemoteCursor(previousStream, nextStream)" in INDEX_HTML
+    assert "migrateRemoteCursor(previousStream, hostInfo.stream)" in INDEX_HTML
+    assert "setRemoteCursor(lastRemoteCursor || defaultRemoteCursor(), { send: false })" in INDEX_HTML

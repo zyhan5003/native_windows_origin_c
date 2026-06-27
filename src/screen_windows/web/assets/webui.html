@@ -933,6 +933,7 @@
         if (!active) {
           hideRemoteCursorIndicator();
         } else {
+          ensureVisibleRemoteCursor();
           renderRemoteCursorIndicator();
         }
         if (active) {
@@ -1147,15 +1148,15 @@
         if (!stream || !hostInfo) {
           return;
         }
+        const previousStream = hostInfo.stream;
         hostInfo.stream = {
           ...hostInfo.stream,
           ...stream,
         };
         overlayEl.textContent = `${hostInfo.stream.source} | ${hostInfo.stream.width}x${hostInfo.stream.height} @ ${hostInfo.stream.fps}fps`;
         renderHealthSummary(hostInfo);
-        remoteCursor = null;
-        lastRemoteCursor = null;
-        hideRemoteCursorIndicator();
+        migrateRemoteCursor(previousStream, hostInfo.stream);
+        renderRemoteCursorIndicator();
       }
 
       function applyQualityPresetToControls() {
@@ -2321,6 +2322,13 @@
         return remoteCursor;
       }
 
+      function ensureVisibleRemoteCursor() {
+        if (!remoteCursor) {
+          setRemoteCursor(lastRemoteCursor || defaultRemoteCursor(), { send: false });
+        }
+        return remoteCursor;
+      }
+
       function hideRemoteCursorIndicator() {
         remoteCursorIndicator.classList.remove('visible');
       }
@@ -2349,6 +2357,22 @@
         };
       }
 
+      function migrateRemoteCursor(previousStream, nextStream) {
+        if (!previousStream || !nextStream || !lastRemoteCursor) {
+          return;
+        }
+        const previousWidth = Math.max(previousStream.width - 1, 1);
+        const previousHeight = Math.max(previousStream.height - 1, 1);
+        const nextWidth = Math.max(nextStream.width - 1, 1);
+        const nextHeight = Math.max(nextStream.height - 1, 1);
+        const migrated = {
+          x: (lastRemoteCursor.x / previousWidth) * nextWidth,
+          y: (lastRemoteCursor.y / previousHeight) * nextHeight,
+        };
+        remoteCursor = remoteCursor ? clampRemoteCursor(migrated) : null;
+        lastRemoteCursor = clampRemoteCursor(migrated);
+      }
+
       function ensureRemoteCursor(clientX, clientY) {
         if (remoteCursor) {
           return remoteCursor;
@@ -2358,9 +2382,7 @@
       }
 
       function moveRemoteCursorBy(deltaX, deltaY) {
-        if (!remoteCursor) {
-          setRemoteCursor(lastRemoteCursor || defaultRemoteCursor(), { send: false });
-        }
+        ensureVisibleRemoteCursor();
         return setRemoteCursor({
           x: remoteCursor.x + (deltaX * touchPointerScale),
           y: remoteCursor.y + (deltaY * touchPointerScale),
