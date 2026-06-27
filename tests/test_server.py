@@ -23,6 +23,7 @@ from screen_windows.control.input import RecordingInputExecutor
 from screen_windows.app.server import HostServer
 from screen_windows.media.video_source import SyntheticFrameSource
 from screen_windows.media.webrtc import wait_for_ice_complete
+from screen_windows.media.webrtc_encoder import current_webrtc_encoder_status
 
 
 def build_recording_clipboard(text: str = "") -> ClipboardService:
@@ -63,6 +64,8 @@ async def _test_health_endpoint_returns_runtime_info() -> None:
         assert "cpu_percent" in payload["system"]
         assert "memory_rss_mb" in payload["system"]
         assert "encoder" in payload
+        assert "runtime" in payload["encoder"]
+        assert payload["encoder"]["runtime"]["active_encoder"]
         assert payload["clipboard"]["enabled"] is True
         assert payload["clipboard"]["backend"] == "recording"
         favicon_response = await client.get("/favicon.ico")
@@ -1103,6 +1106,98 @@ async def _test_webrtc_offer_answer_streams_video() -> None:
             frame = await asyncio.wait_for(received_track.recv(), timeout=10)
             assert frame.width == host._config.stream.width
             assert frame.height == host._config.stream.height
+    finally:
+        await client_pc.close()
+        await host.shutdown()
+
+
+def test_webrtc_runtime_uses_selected_hardware_encoder_when_available() -> None:
+    import pytest
+
+    from screen_windows.media.encoder import EncoderSelection
+    from screen_windows.media.webrtc_encoder import RuntimeH264Encoder, WebRtcEncoderRuntime
+    from tests.test_webrtc import _black_video_frame
+
+    runtime = WebRtcEncoderRuntime(
+        EncoderSelection(
+            backend="qsv",
+            ffmpeg_encoder="h264_qsv",
+            codec="h264",
+            available=True,
+            reason="test",
+        )
+    )
+    try:
+        RuntimeH264Encoder(runtime).encode(_black_video_frame(width=320, height=180))
+    except Exception:
+        pytest.skip("h264_qsv is not available on this machine")
+
+    asyncio.run(_test_webrtc_runtime_uses_selected_hardware_encoder_when_available())
+
+
+async def _test_webrtc_runtime_uses_selected_hardware_encoder_when_available() -> None:
+    host = HostServer(
+        AppConfig(
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
+            stream=StreamConfig(source="synthetic", width=640, height=360, fps=24),
+        ),
+        clipboard_service=build_recording_clipboard(),
+    )
+    await host.start()
+    client_pc = RTCPeerConnection()
+    remote_track_ready = asyncio.Event()
+    received_track = None
+
+    @client_pc.on("track")
+    def on_track(track) -> None:
+        nonlocal received_track
+        received_track = track
+        remote_track_ready.set()
+
+    try:
+        async with connect(host.websocket_url()) as ws:
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "auth",
+                        "version": "0.1.0",
+                        "pin": host.token_manager.pin,
+                    }
+                )
+            )
+            assert json.loads(await ws.recv())["type"] == "auth_ok"
+
+            client_pc.addTransceiver("video", direction="recvonly")
+            offer = await client_pc.createOffer()
+            await client_pc.setLocalDescription(offer)
+            await wait_for_ice_complete(client_pc)
+            assert client_pc.localDescription is not None
+
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "webrtc_offer",
+                        "description_type": client_pc.localDescription.type,
+                        "sdp": client_pc.localDescription.sdp,
+                    }
+                )
+            )
+            answer_message = json.loads(await ws.recv())
+            await client_pc.setRemoteDescription(
+                RTCSessionDescription(
+                    sdp=answer_message["sdp"],
+                    type=answer_message["description_type"],
+                )
+            )
+
+            await asyncio.wait_for(remote_track_ready.wait(), timeout=10)
+            assert received_track is not None
+            await asyncio.wait_for(received_track.recv(), timeout=10)
+
+            status = current_webrtc_encoder_status()
+            assert status.requested_encoder == "h264_qsv"
+            assert status.active_encoder == "h264_qsv"
+            assert status.hardware_active is True
     finally:
         await client_pc.close()
         await host.shutdown()

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 
+import av
 import numpy as np
+from fractions import Fraction
+import pytest
 
 from screen_windows.media.quality import QUALITY_PROFILES, QualitySignal
 from screen_windows.media.video_source import SyntheticFrameSource
@@ -11,8 +14,11 @@ from screen_windows.media.webrtc import (
     SourceVideoTrack,
     VIDEO_CLOCK_HZ,
     apply_video_bandwidth_to_sdp,
+    prefer_h264_codecs,
     wait_for_ice_complete,
 )
+from screen_windows.media.encoder import EncoderSelection
+from screen_windows.media.webrtc_encoder import RuntimeH264Encoder, WebRtcEncoderRuntime
 
 
 def test_apply_video_bandwidth_to_sdp_updates_only_video_section() -> None:
@@ -136,3 +142,107 @@ async def _test_wait_for_ice_complete_timeout_continues() -> None:
             return decorator
 
     await wait_for_ice_complete(NeverCompletesPeerConnection(), timeout=0.01)  # type: ignore[arg-type]
+
+
+def test_prefer_h264_codecs_moves_h264_before_vp8() -> None:
+    asyncio.run(_test_prefer_h264_codecs_moves_h264_before_vp8())
+
+
+async def _test_prefer_h264_codecs_moves_h264_before_vp8() -> None:
+    from aiortc import RTCPeerConnection
+
+    pc = RTCPeerConnection()
+    try:
+        pc.addTransceiver("video")
+        prefer_h264_codecs(pc)
+        codecs = pc.getTransceivers()[0]._preferred_codecs
+
+        assert codecs
+        assert codecs[0].mimeType.lower() == "video/h264"
+        assert any(codec.mimeType.lower() == "video/vp8" for codec in codecs)
+    finally:
+        await pc.close()
+
+
+def test_runtime_h264_encoder_can_use_qsv_when_available() -> None:
+    if not _qsv_available_for_pyav():
+        pytest.skip("h264_qsv is not available on this machine")
+
+    runtime = WebRtcEncoderRuntime(
+        EncoderSelection(
+            backend="qsv",
+            ffmpeg_encoder="h264_qsv",
+            codec="h264",
+            available=True,
+            reason="test",
+        )
+    )
+    assert runtime.status.active_encoder == "pending"
+    assert runtime.status.hardware_active is False
+
+    encoder = RuntimeH264Encoder(runtime)
+    frame = _black_video_frame(width=640, height=360)
+
+    payloads, timestamp = encoder.encode(frame)
+
+    assert payloads
+    assert timestamp == 0
+    assert runtime.status.active_encoder == "h264_qsv"
+    assert runtime.status.hardware_active is True
+
+
+def test_runtime_h264_encoder_falls_back_to_libx264(monkeypatch) -> None:
+    import screen_windows.media.webrtc_encoder as module
+
+    runtime = WebRtcEncoderRuntime(
+        EncoderSelection(
+            backend="qsv",
+            ffmpeg_encoder="h264_qsv",
+            codec="h264",
+            available=True,
+            reason="test",
+        )
+    )
+    original_create = module._create_h264_codec
+
+    def flaky_create(encoder_name: str, **kwargs):
+        if encoder_name == "h264_qsv":
+            raise RuntimeError("qsv unavailable")
+        return original_create(encoder_name, **kwargs)
+
+    monkeypatch.setattr(module, "_create_h264_codec", flaky_create)
+    encoder = RuntimeH264Encoder(runtime)
+
+    payloads, _ = encoder.encode(_black_video_frame(width=320, height=180))
+
+    assert payloads
+    assert runtime.status.active_encoder == "libx264"
+    assert runtime.status.hardware_active is False
+    assert "qsv unavailable" in runtime.status.fallback_reason
+
+
+def _black_video_frame(*, width: int, height: int) -> av.VideoFrame:
+    frame = av.VideoFrame.from_ndarray(
+        np.zeros((height, width, 3), dtype=np.uint8),
+        format="rgb24",
+    )
+    frame.pts = 0
+    frame.time_base = Fraction(1, 30)
+    return frame
+
+
+def _qsv_available_for_pyav() -> bool:
+    runtime = WebRtcEncoderRuntime(
+        EncoderSelection(
+            backend="qsv",
+            ffmpeg_encoder="h264_qsv",
+            codec="h264",
+            available=True,
+            reason="test",
+        )
+    )
+    try:
+        RuntimeH264Encoder(runtime).encode(_black_video_frame(width=320, height=180))
+    except Exception:
+        return False
+    return True

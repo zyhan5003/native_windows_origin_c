@@ -72,6 +72,7 @@ monitor = 0
 - 编码链路需要完整 FFmpeg 构建，不能使用缺少 `rawvideo`/常见 muxer 的精简版。
 - 解析优先级：`encoder.ffmpeg_path` > 环境变量 `SCREEN_WINDOWS_FFMPEG` > `PATH`/WinGet 安装。
 - 快速门禁：`python -m screen_windows info` 查看 FFmpeg、硬编探针和显示器摘要；`bench-encode --width 1280 --height 720 --fps 60 --frames 120 --json` 再按目标场景跑编码基准。
+- 实时 WebRTC H264 会优先使用探测通过的硬编后端，实际生效状态看 `/api/health.encoder.runtime`。
 - Windows 可直接用 `winget install --id Gyan.FFmpeg.Essentials` 安装。
 
 ## 验收

@@ -8,7 +8,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
+from aiortc import RTCPeerConnection, RTCRtpSender, RTCSessionDescription, VideoStreamTrack
 from av import VideoFrame
 import cv2
 import numpy as np
@@ -249,6 +249,7 @@ class WebRtcSession:
             quality_signal_callback=self._quality_signal_callback,
         )
         self._pc.addTrack(self._video_track)
+        prefer_h264_codecs(self._pc)
         await self._pc.setRemoteDescription(
             RTCSessionDescription(sdp=offer_sdp, type=offer_type)
         )
@@ -321,3 +322,18 @@ def apply_video_bandwidth_to_sdp(sdp: str, bitrate_mbps: float) -> str:
         result.append(f"b=AS:{bitrate_kbps}")
 
     return "\r\n".join(result) + "\r\n"
+
+
+def prefer_h264_codecs(pc: RTCPeerConnection) -> None:
+    """优先协商 H264，让运行时硬编后端能真正参与 WebRTC 推流。"""
+
+    capabilities = RTCRtpSender.getCapabilities("video").codecs
+    h264_codecs = [codec for codec in capabilities if codec.mimeType.lower() == "video/h264"]
+    other_codecs = [codec for codec in capabilities if codec.mimeType.lower() != "video/h264"]
+    if not h264_codecs:
+        return
+
+    preferred = h264_codecs + other_codecs
+    for transceiver in pc.getTransceivers():
+        if transceiver.kind == "video":
+            transceiver.setCodecPreferences(preferred)

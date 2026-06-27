@@ -21,6 +21,7 @@ from ..media.encoder import EncoderManager
 from ..media.quality import QualityController, QualityProfile, QualitySignal
 from ..media.video_source import build_frame_source
 from ..media.webrtc import WebRtcSession
+from ..media.webrtc_encoder import install_webrtc_encoder_runtime
 from ..network.discovery import DiscoveryAnnouncement, DiscoveryManager
 from ..network.filetransfer import FileTransferError, FileTransferService
 from ..network.protocol import (
@@ -126,6 +127,9 @@ class HostServer:
             receive_dir=Path(config.file_transfer.receive_dir),
             max_file_size=config.file_transfer.max_file_size,
             chunk_size=config.file_transfer.chunk_size,
+        )
+        self._webrtc_encoder_runtime = install_webrtc_encoder_runtime(
+            self._encoder_manager.selection
         )
         self._file_access_tickets: dict[str, float] = {}
 
@@ -303,6 +307,7 @@ class HostServer:
                 "pipeline_missing_muxers": list(
                     self._encoder_manager.pipeline_support.missing_muxers
                 ),
+                "runtime": self._webrtc_encoder_runtime.status.to_dict(),
                 "command_preview": self._encoder_manager.build_command()
                 if self._encoder_manager.pipeline_support.ready
                 else [],
