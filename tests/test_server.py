@@ -8,8 +8,8 @@ import json
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from websockets.asyncio.client import connect
 
-from screen_windows.clipboard import ClipboardService, RecordingClipboardBackend
-from screen_windows.config import (
+from screen_windows.control.clipboard import ClipboardService, RecordingClipboardBackend
+from screen_windows.app.config import (
     AppConfig,
     AuthConfig,
     QualityConfig,
@@ -17,12 +17,12 @@ from screen_windows.config import (
     StreamConfig,
     load_config,
 )
-from screen_windows.display import DisplayInfo, DisplayMonitor
-from screen_windows.filetransfer import FileTransferService
-from screen_windows.input import RecordingInputExecutor
-from screen_windows.server import HostServer
-from screen_windows.video_source import SyntheticFrameSource
-from screen_windows.webrtc import wait_for_ice_complete
+from screen_windows.control.display import DisplayInfo, DisplayMonitor
+from screen_windows.network.filetransfer import FileTransferService
+from screen_windows.control.input import RecordingInputExecutor
+from screen_windows.app.server import HostServer
+from screen_windows.media.video_source import SyntheticFrameSource
+from screen_windows.media.webrtc import wait_for_ice_complete
 
 
 def build_recording_clipboard(text: str = "") -> ClipboardService:
@@ -171,13 +171,13 @@ def test_websocket_auth_with_pin() -> None:
 async def _test_websocket_auth_with_pin() -> None:
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=18765, http_port=18766),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=build_recording_clipboard(),
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:18765") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -204,7 +204,7 @@ async def _test_websocket_auth_none_allows_control_without_pin() -> None:
     executor = RecordingInputExecutor(display_width=1280, display_height=720)
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=18665, http_port=18666),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
             auth=AuthConfig(mode="none"),
         ),
         input_executor=executor,
@@ -212,7 +212,7 @@ async def _test_websocket_auth_none_allows_control_without_pin() -> None:
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:18665") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(json.dumps({"type": "auth", "version": "0.1.0"}))
             auth_message = json.loads(await ws.recv())
             assert auth_message["type"] == "auth_ok"
@@ -242,14 +242,14 @@ def test_websocket_auth_always_rejects_token_reuse() -> None:
 async def _test_websocket_auth_always_rejects_token_reuse() -> None:
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=18565, http_port=18566),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
             auth=AuthConfig(mode="always", pin="123456"),
         ),
         clipboard_service=build_recording_clipboard(),
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:18565") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(json.dumps({"type": "auth", "version": "0.1.0", "pin": "123456"}))
             pin_auth = json.loads(await ws.recv())
             assert pin_auth["type"] == "auth_ok"
@@ -257,7 +257,7 @@ async def _test_websocket_auth_always_rejects_token_reuse() -> None:
 
         timestamp = int(datetime.now(UTC).timestamp())
         signature = host.token_manager.build_hmac(token, timestamp)
-        async with connect("ws://127.0.0.1:18565") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -272,7 +272,7 @@ async def _test_websocket_auth_always_rejects_token_reuse() -> None:
             token_auth = json.loads(await ws.recv())
             assert token_auth == {"type": "auth_error", "reason": "pin required"}
 
-        async with connect("ws://127.0.0.1:18565") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(json.dumps({"type": "auth", "version": "0.1.0", "pin": "123456"}))
             second_pin_auth = json.loads(await ws.recv())
             assert second_pin_auth["type"] == "auth_ok"
@@ -288,14 +288,14 @@ async def _test_websocket_auth_token_survives_host_restart(tmp_path) -> None:
     store_path = tmp_path / "tokens.json"
     first_host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19165, http_port=19166),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
             auth=AuthConfig(pin="123456", token_store_path=str(store_path)),
         ),
         clipboard_service=build_recording_clipboard(),
     )
     await first_host.start()
     try:
-        async with connect("ws://127.0.0.1:19165") as ws:
+        async with connect(first_host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -313,7 +313,7 @@ async def _test_websocket_auth_token_survives_host_restart(tmp_path) -> None:
 
     second_host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19165, http_port=19166),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
             auth=AuthConfig(pin="123456", token_store_path=str(store_path)),
         ),
         clipboard_service=build_recording_clipboard(),
@@ -322,7 +322,7 @@ async def _test_websocket_auth_token_survives_host_restart(tmp_path) -> None:
     try:
         timestamp = int(datetime.now(UTC).timestamp())
         signature = second_host.token_manager.build_hmac(token, timestamp)
-        async with connect("ws://127.0.0.1:19165") as ws:
+        async with connect(second_host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -348,8 +348,8 @@ def test_websocket_auth_token_survives_default_config_restart(tmp_path, monkeypa
         """
 [server]
 bind = "127.0.0.1"
-port = 19065
-http_port = 19066
+port = 0
+http_port = 0
 
 [auth]
 pin = "123456"
@@ -364,7 +364,7 @@ async def _test_websocket_auth_token_survives_default_config_restart(config_file
     first_host = HostServer(load_config(config_file), clipboard_service=build_recording_clipboard())
     await first_host.start()
     try:
-        async with connect("ws://127.0.0.1:19065") as ws:
+        async with connect(first_host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -385,7 +385,7 @@ async def _test_websocket_auth_token_survives_default_config_restart(config_file
     try:
         timestamp = int(datetime.now(UTC).timestamp())
         signature = second_host.token_manager.build_hmac(token, timestamp)
-        async with connect("ws://127.0.0.1:19065") as ws:
+        async with connect(second_host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -412,14 +412,14 @@ async def _test_input_batch_is_executed_and_acknowledged() -> None:
     executor = RecordingInputExecutor(display_width=1280, display_height=720)
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19865, http_port=19866),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         input_executor=executor,
         clipboard_service=build_recording_clipboard(),
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19865") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -461,13 +461,13 @@ def test_websocket_ping_returns_pong() -> None:
 async def _test_websocket_ping_returns_pong() -> None:
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19365, http_port=19366),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=build_recording_clipboard(),
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19365") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -496,13 +496,13 @@ def test_websocket_stats_returns_runtime_snapshot() -> None:
 async def _test_websocket_stats_returns_runtime_snapshot() -> None:
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19065, http_port=19066),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=build_recording_clipboard(),
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19065") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -533,7 +533,7 @@ def test_display_switch_updates_monitor_and_input_size(monkeypatch) -> None:
 
 
 async def _test_display_switch_updates_monitor_and_input_size(monkeypatch) -> None:
-    import screen_windows.server as server_module
+    import screen_windows.app.server as server_module
 
     def fake_enumerate_displays(config: StreamConfig) -> DisplayInfo:
         return DisplayInfo(
@@ -556,14 +556,14 @@ async def _test_display_switch_updates_monitor_and_input_size(monkeypatch) -> No
     executor = RecordingInputExecutor(display_width=640, display_height=360)
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=18965, http_port=18966),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         input_executor=executor,
         clipboard_service=build_recording_clipboard(),
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:18965") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -602,13 +602,13 @@ async def _test_clipboard_read_and_write_are_acknowledged() -> None:
     clipboard = build_recording_clipboard("host text")
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19665, http_port=19666),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=clipboard,
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19665") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -660,14 +660,14 @@ async def _test_file_upload_chunks_are_written_and_acknowledged(tmp_path) -> Non
     file_transfer = build_file_transfer(tmp_path)
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19565, http_port=19566),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=build_recording_clipboard(),
         file_transfer_service=file_transfer,
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19565") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -752,14 +752,14 @@ async def _test_file_upload_zero_byte_file_completes_without_chunks(tmp_path) ->
     file_transfer = build_file_transfer(tmp_path)
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19665, http_port=19666),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=build_recording_clipboard(),
         file_transfer_service=file_transfer,
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19665") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -813,14 +813,14 @@ async def _test_file_upload_partial_is_canceled_on_disconnect(tmp_path) -> None:
     file_transfer = build_file_transfer(tmp_path)
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19265, http_port=19266),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=build_recording_clipboard(),
         file_transfer_service=file_transfer,
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19265") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -876,14 +876,14 @@ def test_quality_state_can_be_read_and_locked() -> None:
 async def _test_quality_state_can_be_read_and_locked() -> None:
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19465, http_port=19466),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
             quality=QualityConfig(mode="auto", profile="standard"),
         ),
         clipboard_service=build_recording_clipboard(),
     )
     await host.start()
     try:
-        async with connect("ws://127.0.0.1:19465") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {
@@ -967,7 +967,7 @@ def test_webrtc_offer_answer_streams_video() -> None:
 async def _test_webrtc_offer_answer_streams_video() -> None:
     host = HostServer(
         AppConfig(
-            server=ServerConfig(bind="127.0.0.1", port=19765, http_port=19766),
+            server=ServerConfig(bind="127.0.0.1", port=0, http_port=0),
         ),
         clipboard_service=build_recording_clipboard(),
     )
@@ -983,7 +983,7 @@ async def _test_webrtc_offer_answer_streams_video() -> None:
         remote_track_ready.set()
 
     try:
-        async with connect("ws://127.0.0.1:19765") as ws:
+        async with connect(host.websocket_url()) as ws:
             await ws.send(
                 json.dumps(
                     {

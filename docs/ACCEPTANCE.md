@@ -41,6 +41,7 @@ python -m screen_windows bench-encode
 
 ## 自动化覆盖
 
+- 2026-06-27：代码结构收敛为能力域包，根包只保留入口；旧根路径业务导入搜索为零。
 - 2026-06-27：文件传输覆盖零字节、错误 offset、超限、非法/保留名、重名、`.part` 过滤和断连清理。
 - 2026-06-27：默认配置启用 token hash 持久化，Host 重启后 WebSocket token 认证可复用。
 - 2026-06-27：Host Ctrl+C 停止不再输出 traceback，真实终端只显示 `screen_windows host stopped`。

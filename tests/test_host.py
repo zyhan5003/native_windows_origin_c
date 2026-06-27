@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from screen_windows import host as module
+from screen_windows.app import host as module
 
 
 def test_run_host_handles_keyboard_interrupt_cleanly(monkeypatch, capsys) -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from screen_windows.clipboard import ClipboardService, RecordingClipboardBackend
+from screen_windows.control.clipboard import ClipboardService, RecordingClipboardBackend
 
 
 def test_clipboard_service_tracks_text_reads_and_writes() -> None:

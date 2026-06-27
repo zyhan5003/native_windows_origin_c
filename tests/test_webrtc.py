@@ -4,9 +4,9 @@ import asyncio
 
 import numpy as np
 
-from screen_windows.quality import QUALITY_PROFILES, QualitySignal
-from screen_windows.video_source import SyntheticFrameSource
-from screen_windows.webrtc import (
+from screen_windows.media.quality import QUALITY_PROFILES, QualitySignal
+from screen_windows.media.video_source import SyntheticFrameSource
+from screen_windows.media.webrtc import (
     STATIC_EFFECTIVE_FPS,
     SourceVideoTrack,
     VIDEO_CLOCK_HZ,

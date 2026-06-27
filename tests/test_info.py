@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import json
 
-from screen_windows.config import AppConfig, AuthConfig, EncoderConfig, StreamConfig
-from screen_windows.encoder import (
+from screen_windows.app.config import AppConfig, AuthConfig, EncoderConfig, StreamConfig
+from screen_windows.media.encoder import (
     EncoderProbeResult,
     EncoderSelection,
     FfmpegCapabilities,
     FfmpegPipelineSupport,
 )
-from screen_windows.info import build_info_payload, main as info_main, render_text_summary
+from screen_windows.app.info import build_info_payload, main as info_main, render_text_summary
 
 
 class FakeEncoderManager:
@@ -50,7 +50,7 @@ class FakeEncoderManager:
 
 
 def test_build_info_payload_contains_encoder_gate(monkeypatch) -> None:
-    from screen_windows import info as module
+    from screen_windows.app import info as module
 
     monkeypatch.setattr(module, "EncoderManager", FakeEncoderManager)
 
@@ -70,7 +70,7 @@ def test_build_info_payload_contains_encoder_gate(monkeypatch) -> None:
 
 
 def test_render_text_summary_mentions_probe_result(monkeypatch) -> None:
-    from screen_windows import info as module
+    from screen_windows.app import info as module
 
     monkeypatch.setattr(module, "EncoderManager", FakeEncoderManager)
     payload = build_info_payload(AppConfig())
@@ -83,7 +83,7 @@ def test_render_text_summary_mentions_probe_result(monkeypatch) -> None:
 
 
 def test_info_main_json_uses_config_and_exit_code(monkeypatch, capsys) -> None:
-    from screen_windows import info as module
+    from screen_windows.app import info as module
 
     monkeypatch.setattr(module, "EncoderManager", FakeEncoderManager)
 

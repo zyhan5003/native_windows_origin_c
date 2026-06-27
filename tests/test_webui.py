@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from screen_windows.webui import INDEX_HTML
+from screen_windows.web.webui import INDEX_HTML
 
 
 def test_webui_invalid_token_stops_reconnect_until_pin_is_provided() -> None:

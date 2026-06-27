@@ -4,7 +4,7 @@ import base64
 
 import pytest
 
-from screen_windows.filetransfer import (
+from screen_windows.network.filetransfer import (
     FileTransferError,
     FileTransferService,
     sanitize_filename,

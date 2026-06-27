@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from screen_windows.config import apply_overrides, default_token_store_path, load_config
+from screen_windows.app.config import apply_overrides, default_token_store_path, load_config
 
 
 def test_load_config_defaults_when_missing(tmp_path: Path) -> None:

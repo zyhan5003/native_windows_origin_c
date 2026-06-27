@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from screen_windows.stats import SystemStatsCollector
+from screen_windows.telemetry.stats import SystemStatsCollector
 
 
 def test_system_stats_snapshot_has_stable_shape() -> None:

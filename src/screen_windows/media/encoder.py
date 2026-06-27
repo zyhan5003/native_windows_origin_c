@@ -12,7 +12,7 @@ import time
 
 import numpy as np
 
-from .config import EncoderConfig, StreamConfig
+from ..app.config import EncoderConfig, StreamConfig
 
 
 DEFAULT_FFMPEG_CANDIDATES = (

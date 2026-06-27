@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from screen_windows.cli import build_parser
-from screen_windows.cli import main as cli_main
+from screen_windows.app.cli import build_parser
+from screen_windows.app.cli import main as cli_main
 
 
 def test_cli_registers_discover_command() -> None:
@@ -55,7 +55,7 @@ def test_cli_registers_bench_encode_overrides() -> None:
 
 
 def test_cli_host_returns_run_host_exit_code(monkeypatch) -> None:
-    from screen_windows import cli as module
+    from screen_windows.app import cli as module
 
     calls = {}
 

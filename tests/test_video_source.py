@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from screen_windows.config import StreamConfig
-from screen_windows.video_source import SyntheticFrameSource, build_frame_source
+from screen_windows.app.config import StreamConfig
+from screen_windows.media.video_source import SyntheticFrameSource, build_frame_source
 
 
 def test_synthetic_frame_source_outputs_expected_shape() -> None:
@@ -18,7 +18,7 @@ def test_synthetic_frame_source_outputs_expected_shape() -> None:
 def test_build_frame_source_auto_falls_back_to_synthetic_when_backends_fail(
     monkeypatch,
 ) -> None:
-    import screen_windows.video_source as module
+    import screen_windows.media.video_source as module
 
     def fail_dxcam(config: StreamConfig):
         raise RuntimeError("dxcam unavailable")

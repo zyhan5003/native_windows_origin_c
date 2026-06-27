@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from screen_windows.auth import TokenManager, TokenStore
+from screen_windows.security.auth import TokenManager, TokenStore
 
 
 def test_issue_and_verify_token_success() -> None:

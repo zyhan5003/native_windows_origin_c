@@ -5,14 +5,14 @@ import json
 
 import numpy as np
 
-from screen_windows.bench import main as bench_main
-from screen_windows.bench import run_encode_bench
-from screen_windows.config import EncoderConfig, StreamConfig
-from screen_windows.encoder import EncodingStats, FfmpegPipelineError
+from screen_windows.app.bench import main as bench_main
+from screen_windows.app.bench import run_encode_bench
+from screen_windows.app.config import EncoderConfig, StreamConfig
+from screen_windows.media.encoder import EncodingStats, FfmpegPipelineError
 
 
 def test_run_encode_bench_returns_expected_shape(monkeypatch) -> None:
-    from screen_windows import bench as module
+    from screen_windows.app import bench as module
 
     class FakeRunner:
         stderr_output = ""
@@ -75,7 +75,7 @@ def test_bench_main_reports_structured_pipeline_error(
     monkeypatch,
     capsys,
 ) -> None:
-    from screen_windows import bench as module
+    from screen_windows.app import bench as module
 
     def fake_run_encode_bench(**kwargs) -> dict[str, object]:
         raise FfmpegPipelineError(
@@ -94,7 +94,7 @@ def test_bench_main_reports_structured_pipeline_error(
 
 
 def test_bench_main_forwards_cli_overrides(monkeypatch, capsys) -> None:
-    from screen_windows import bench as module
+    from screen_windows.app import bench as module
 
     calls = []
 

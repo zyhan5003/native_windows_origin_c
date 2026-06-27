@@ -13,15 +13,17 @@ from typing import Any
 from aiohttp import web
 from websockets.asyncio.server import Server, ServerConnection, serve
 
-from .auth import TokenManager, TokenStore
-from .clipboard import ClipboardService, WindowsClipboardBackend
 from .config import AppConfig
-from .display import DisplayMonitor, enumerate_displays
-from .discovery import DiscoveryAnnouncement, DiscoveryManager
-from .encoder import EncoderManager
-from .filetransfer import FileTransferError, FileTransferService
-from .input import InputBatch, InputExecutor, WindowsInputExecutor
-from .protocol import (
+from ..control.clipboard import ClipboardService, WindowsClipboardBackend
+from ..control.display import DisplayMonitor, enumerate_displays
+from ..control.input import InputBatch, InputExecutor, WindowsInputExecutor
+from ..media.encoder import EncoderManager
+from ..media.quality import QualityController, QualitySignal
+from ..media.video_source import build_frame_source
+from ..media.webrtc import WebRtcSession
+from ..network.discovery import DiscoveryAnnouncement, DiscoveryManager
+from ..network.filetransfer import FileTransferError, FileTransferService
+from ..network.protocol import (
     ClientAuthRequest,
     build_auth_error,
     build_auth_ok,
@@ -42,11 +44,9 @@ from .protocol import (
     build_stats,
     build_webrtc_answer,
 )
-from .quality import QualityController, QualitySignal
-from .stats import SystemStatsCollector
-from .video_source import build_frame_source
-from .webrtc import WebRtcSession
-from .webui import INDEX_HTML
+from ..security.auth import TokenManager, TokenStore
+from ..telemetry.stats import SystemStatsCollector
+from ..web.webui import INDEX_HTML
 
 
 @dataclass(slots=True)
@@ -99,6 +99,8 @@ class HostServer:
         self._web_runner: web.AppRunner | None = None
         self._http_site: web.TCPSite | None = None
         self._ws_server: Server | None = None
+        self._actual_http_port = config.server.http_port
+        self._actual_ws_port = config.server.port
         self._frame_source = build_frame_source(config.stream)
         self._display_info = enumerate_displays(config.stream)
         self._discovery_manager = DiscoveryManager(
@@ -232,8 +234,8 @@ class HostServer:
             "authenticated_clients": runtime["authenticated_clients"],
             "active_webrtc_sessions": runtime["active_webrtc_sessions"],
             "ports": {
-                "http": self._config.server.http_port,
-                "ws": self._config.server.port,
+                "http": self._actual_http_port,
+                "ws": self._actual_ws_port,
             },
             "discovery": self._discovery_manager.status,
             "system": runtime["system"],
@@ -396,8 +398,8 @@ class HostServer:
     def _build_auth_ok_payload(self, *, token: str) -> dict[str, Any]:
         return build_auth_ok(
             token=token,
-            http_port=self._config.server.http_port,
-            ws_port=self._config.server.port,
+            http_port=self._actual_http_port,
+            ws_port=self._actual_ws_port,
             width=self._config.stream.width,
             height=self._config.stream.height,
             monitors=[
@@ -744,6 +746,25 @@ class HostServer:
         # aiortc 可能因网络断开自行进入 failed/closed，必须同步清理 Host 侧统计。
         asyncio.create_task(self._close_peer_session(peer_session))
 
+    def websocket_url(self) -> str:
+        return f"ws://{self._config.server.bind}:{self._actual_ws_port}"
+
+    def http_url(self) -> str:
+        return f"http://{self._config.server.bind}:{self._actual_http_port}"
+
+    @staticmethod
+    def _site_port(site: web.TCPSite) -> int:
+        if site._server is None or not site._server.sockets:
+            raise RuntimeError("HTTP site has not bound a socket")
+        return int(site._server.sockets[0].getsockname()[1])
+
+    @staticmethod
+    def _server_port(server: Server) -> int:
+        sockets = getattr(server, "sockets", None)
+        if not sockets:
+            raise RuntimeError("WebSocket server has not bound a socket")
+        return int(sockets[0].getsockname()[1])
+
     async def start(self) -> None:
         self._web_runner = web.AppRunner(self._app)
         await self._web_runner.setup()
@@ -753,24 +774,26 @@ class HostServer:
             port=self._config.server.http_port,
         )
         await self._http_site.start()
+        self._actual_http_port = self._site_port(self._http_site)
         self._ws_server = await serve(
             self._handle_websocket_connection,
             self._config.server.bind,
             self._config.server.port,
         )
+        self._actual_ws_port = self._server_port(self._ws_server)
         await self._discovery_manager.start(
             DiscoveryAnnouncement(
                 device_name=platform.node() or "screen-windows",
-                ws_port=self._config.server.port,
-                http_port=self._config.server.http_port,
+                ws_port=self._actual_ws_port,
+                http_port=self._actual_http_port,
                 auth_mode=self._config.auth.mode,
             )
         )
 
         print(
             f"screen_windows host started: "
-            f"http://{self._config.server.bind}:{self._config.server.http_port} "
-            f"ws://{self._config.server.bind}:{self._config.server.port} "
+            f"{self.http_url()} "
+            f"{self.websocket_url()} "
             f"pin={self._token_manager.pin} "
             f"stream={self._frame_source.source_name}:{self._config.stream.width}x{self._config.stream.height}@{self._config.stream.fps} "
             f"encoder={self._encoder_manager.selection.backend or 'none'}"

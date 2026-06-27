@@ -8,7 +8,7 @@ from typing import Protocol
 import cv2
 import numpy as np
 
-from .config import StreamConfig
+from ..app.config import StreamConfig
 
 try:
     import dxcam

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from screen_windows.input import (
+from screen_windows.control.input import (
     EXTENDED_CODES,
     InputBatch,
     MOUSEEVENTF_ABSOLUTE,
@@ -69,7 +69,7 @@ def test_windows_input_executor_maps_mouse_to_virtual_desktop(monkeypatch) -> No
         def MapVirtualKeyW(self, vk, mode):
             return vk
 
-    monkeypatch.setattr("screen_windows.input.ctypes.windll", type("Windll", (), {"user32": User32()})())
+    monkeypatch.setattr("screen_windows.control.input.ctypes.windll", type("Windll", (), {"user32": User32()})())
     executor = WindowsInputExecutor(
         display_width=800,
         display_height=450,

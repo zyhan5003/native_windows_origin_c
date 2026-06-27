@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from screen_windows.quality import QualityController, QualitySignal
+from screen_windows.media.quality import QualityController, QualitySignal
 
 
 def test_quality_controller_downgrades_after_short_bad_signal() -> None:

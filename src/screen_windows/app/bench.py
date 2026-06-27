@@ -5,8 +5,8 @@ import json
 from dataclasses import replace
 
 from .config import AppConfig, load_config
-from .encoder import EncoderManager, FfmpegError
-from .video_source import SyntheticFrameSource
+from ..media.encoder import EncoderManager, FfmpegError
+from ..media.video_source import SyntheticFrameSource
 
 
 def run_encode_bench(

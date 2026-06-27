@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from screen_windows.config import EncoderConfig, StreamConfig
-from screen_windows.encoder import (
+from screen_windows.app.config import EncoderConfig, StreamConfig
+from screen_windows.media.encoder import (
     EncoderManager,
     EncoderProbeResult,
     EncoderSelection,
@@ -84,7 +84,7 @@ def test_dedupe_candidates_preserves_order() -> None:
 
 
 def test_build_ffmpeg_candidates_prefers_explicit_env_and_path(monkeypatch) -> None:
-    from screen_windows import encoder as module
+    from screen_windows.media import encoder as module
 
     monkeypatch.setenv(ENV_FFMPEG_PATH, "D:/env/ffmpeg.exe")
     monkeypatch.setattr(module.shutil, "which", lambda name: "E:/path/ffmpeg.exe")
@@ -105,7 +105,7 @@ def test_build_ffmpeg_candidates_prefers_explicit_env_and_path(monkeypatch) -> N
 
 
 def test_resolve_ffmpeg_path_uses_env_before_internal_candidates(monkeypatch) -> None:
-    from screen_windows import encoder as module
+    from screen_windows.media import encoder as module
 
     monkeypatch.setenv(ENV_FFMPEG_PATH, "C:/env/ffmpeg.exe")
     monkeypatch.setattr(module.shutil, "which", lambda name: None)
@@ -240,7 +240,7 @@ def test_build_backend_encoder_args_for_amf_and_qsv() -> None:
 
 
 def test_encoder_manager_uses_detected_ffmpeg(monkeypatch) -> None:
-    from screen_windows import encoder as module
+    from screen_windows.media import encoder as module
 
     capabilities = FfmpegCapabilities(
         ffmpeg_path="ffmpeg.exe",
@@ -272,7 +272,7 @@ def test_encoder_manager_uses_detected_ffmpeg(monkeypatch) -> None:
 
 
 def test_resolve_working_selection_falls_back_after_probe_failure(monkeypatch) -> None:
-    from screen_windows import encoder as module
+    from screen_windows.media import encoder as module
 
     capabilities = FfmpegCapabilities(
         ffmpeg_path="ffmpeg.exe",
@@ -315,7 +315,7 @@ def test_resolve_working_selection_falls_back_after_probe_failure(monkeypatch) -
 
 
 def test_resolve_working_selection_preserves_requested_backend_failure(monkeypatch) -> None:
-    from screen_windows import encoder as module
+    from screen_windows.media import encoder as module
 
     capabilities = FfmpegCapabilities(
         ffmpeg_path="ffmpeg.exe",
@@ -376,7 +376,7 @@ def test_evaluate_pipeline_support_reports_missing_rawvideo() -> None:
 
 
 def test_encoder_manager_build_command_requires_pipeline_ready(monkeypatch) -> None:
-    from screen_windows import encoder as module
+    from screen_windows.media import encoder as module
 
     capabilities = FfmpegCapabilities(
         ffmpeg_path="ffmpeg.exe",
@@ -401,7 +401,7 @@ def test_encoder_manager_build_command_requires_pipeline_ready(monkeypatch) -> N
 
 
 def test_probe_encoder_backend_reports_timeout(monkeypatch) -> None:
-    from screen_windows import encoder as module
+    from screen_windows.media import encoder as module
 
     monkeypatch.setattr(
         module.subprocess,

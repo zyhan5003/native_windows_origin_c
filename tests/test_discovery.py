@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import socket
 
-from screen_windows.discovery import (
+from screen_windows.network.discovery import (
     DISCOVERY_MAGIC,
     DiscoveryAnnouncement,
     DiscoveryManager,

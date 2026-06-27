@@ -6,8 +6,8 @@ import sys
 from typing import Any
 
 from .config import AppConfig, load_config
-from .display import enumerate_displays
-from .encoder import EncoderManager
+from ..control.display import enumerate_displays
+from ..media.encoder import EncoderManager
 
 
 def build_info_payload(config: AppConfig) -> dict[str, Any]:

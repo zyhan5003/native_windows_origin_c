@@ -6,9 +6,9 @@ import json
 
 from .bench import main as bench_main
 from .config import load_config
-from .discovery import discover_hosts
 from .host import run_host
 from .info import main as info_main
+from ..network.discovery import discover_hosts
 
 
 def build_parser() -> argparse.ArgumentParser:

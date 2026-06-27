@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from screen_windows.config import StreamConfig
-from screen_windows.display import enumerate_displays
+from screen_windows.app.config import StreamConfig
+from screen_windows.control.display import enumerate_displays
 
 
 def test_enumerate_displays_uses_mss_monitors(monkeypatch) -> None:
-    import screen_windows.display as module
+    import screen_windows.control.display as module
 
     class FakeMss:
         monitors = [
@@ -32,7 +32,7 @@ def test_enumerate_displays_uses_mss_monitors(monkeypatch) -> None:
 
 
 def test_enumerate_displays_falls_back_when_mss_missing(monkeypatch) -> None:
-    import screen_windows.display as module
+    import screen_windows.control.display as module
 
     monkeypatch.setattr(module, "MSS", None)
 
