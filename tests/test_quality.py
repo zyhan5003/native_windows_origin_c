@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+from screen_windows.quality import QualityController, QualitySignal
+
+
+def test_quality_controller_downgrades_after_short_bad_signal() -> None:
+    controller = QualityController(mode="auto", profile="standard")
+
+    first = controller.update(QualitySignal(rtt_ms=70, bandwidth_mbps=0.4), now=10.0)
+    assert first.profile.key == "standard"
+    assert first.pending_profile is not None
+    assert first.pending_profile.key == "limit"
+
+    second = controller.update(QualitySignal(rtt_ms=70, bandwidth_mbps=0.4), now=11.1)
+    assert second.profile.key == "limit"
+    assert second.pending_profile is None
+
+
+def test_quality_controller_manual_lock_ignores_network_signal() -> None:
+    controller = QualityController(mode="manual", profile="fast")
+
+    state = controller.update(QualitySignal(rtt_ms=90, bandwidth_mbps=0.2), now=1.0)
+
+    assert state.mode == "manual"
+    assert state.locked is True
+    assert state.profile.key == "fast"
+
+
+def test_quality_controller_merges_partial_signals() -> None:
+    controller = QualityController(mode="auto", profile="standard")
+
+    controller.update(QualitySignal(rtt_ms=8, bandwidth_mbps=12), now=1.0)
+    state = controller.update(QualitySignal(motion_ratio=0.42), now=1.2)
+
+    assert state.last_signal is not None
+    assert state.last_signal.rtt_ms == 8
+    assert state.last_signal.bandwidth_mbps == 12
+    assert state.last_signal.motion_ratio == 0.42
