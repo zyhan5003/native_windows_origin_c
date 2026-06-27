@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 
+import numpy as np
+
 from screen_windows.quality import QUALITY_PROFILES, QualitySignal
 from screen_windows.video_source import SyntheticFrameSource
 from screen_windows.webrtc import (
+    STATIC_EFFECTIVE_FPS,
     SourceVideoTrack,
+    VIDEO_CLOCK_HZ,
     apply_video_bandwidth_to_sdp,
     wait_for_ice_complete,
 )
@@ -70,10 +74,11 @@ async def _test_source_video_track_downscales_to_quality_profile() -> None:
 
     assert frame.width == 1280
     assert frame.height == 720
-    assert frame.time_base.denominator == 30
+    assert frame.time_base.denominator == VIDEO_CLOCK_HZ
     assert stats.frames_sent == 2
     assert stats.target_profile == "eco"
     assert stats.target_fps == 30
+    assert stats.effective_fps == 30
     assert stats.target_bitrate_mbps == 2.0
     assert stats.last_width == 1280
     assert stats.last_height == 720
@@ -82,6 +87,36 @@ async def _test_source_video_track_downscales_to_quality_profile() -> None:
     assert 0 <= stats.motion_ratio <= 1
     assert len(signals) == 2
     assert signals[-1].motion_ratio == stats.motion_ratio
+
+
+def test_source_video_track_throttles_static_frames() -> None:
+    asyncio.run(_test_source_video_track_throttles_static_frames())
+
+
+async def _test_source_video_track_throttles_static_frames() -> None:
+    class StaticFrameSource:
+        width = 640
+        height = 360
+        fps = 60
+        source_name = "static-test"
+
+        def render(self, frame_index: int) -> np.ndarray:
+            return np.zeros((self.height, self.width, 3), dtype=np.uint8)
+
+    track = SourceVideoTrack(
+        StaticFrameSource(),
+        quality_profile_provider=lambda: QUALITY_PROFILES["fast"],
+    )
+
+    await track.recv()
+    await track.recv()
+    frame = await track.recv()
+    stats = track.stats
+
+    assert frame.time_base.denominator == VIDEO_CLOCK_HZ
+    assert stats.target_fps == 60
+    assert stats.effective_fps == STATIC_EFFECTIVE_FPS
+    assert stats.motion_ratio == 0.0
 
 
 def test_wait_for_ice_complete_timeout_continues() -> None:

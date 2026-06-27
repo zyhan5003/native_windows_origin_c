@@ -18,6 +18,9 @@ from .video_source import FrameSource
 
 
 LOGGER = logging.getLogger(__name__)
+VIDEO_CLOCK_HZ = 90_000
+STATIC_MOTION_RATIO_THRESHOLD = 0.01
+STATIC_EFFECTIVE_FPS = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +28,7 @@ class VideoTrackStats:
     frames_sent: int
     target_profile: str
     target_fps: int
+    effective_fps: int
     target_bitrate_mbps: float
     last_width: int
     last_height: int
@@ -39,6 +43,7 @@ class VideoTrackStats:
             "frames_sent": self.frames_sent,
             "target_profile": self.target_profile,
             "target_fps": self.target_fps,
+            "effective_fps": self.effective_fps,
             "target_bitrate_mbps": self.target_bitrate_mbps,
             "last_width": self.last_width,
             "last_height": self.last_height,
@@ -71,11 +76,13 @@ class SourceVideoTrack(VideoStreamTrack):
         self._last_height = 0
         self._last_profile_key = "standard"
         self._last_target_fps = 0
+        self._last_effective_fps = 0
         self._last_target_bitrate_mbps = 0.0
         self._last_capture_ms = 0.0
         self._last_resize_ms = 0.0
         self._last_motion_ratio = 0.0
         self._previous_motion_sample: np.ndarray | None = None
+        self._motion_sample_count = 0
 
     @property
     def stats(self) -> VideoTrackStats:
@@ -86,6 +93,7 @@ class SourceVideoTrack(VideoStreamTrack):
             frames_sent=self._frame_index,
             target_profile=self._last_profile_key,
             target_fps=self._last_target_fps,
+            effective_fps=self._last_effective_fps,
             target_bitrate_mbps=self._last_target_bitrate_mbps,
             last_width=self._last_width,
             last_height=self._last_height,
@@ -98,10 +106,12 @@ class SourceVideoTrack(VideoStreamTrack):
 
     async def recv(self) -> VideoFrame:
         target = self._target_profile()
+        effective_fps = self._effective_fps(target)
         self._last_profile_key = target.key
         self._last_target_fps = target.fps
+        self._last_effective_fps = effective_fps
         self._last_target_bitrate_mbps = target.bitrate_mbps
-        frame_interval = 1 / max(target.fps, 1)
+        frame_interval = 1 / max(effective_fps, 1)
         if self._last_frame_at is not None:
             delay = (self._last_frame_at + frame_interval) - time.perf_counter()
             if delay > 0:
@@ -122,10 +132,12 @@ class SourceVideoTrack(VideoStreamTrack):
         self._last_resize_ms = round((time.perf_counter() - resize_started_at) * 1000, 3)
 
         frame = VideoFrame.from_ndarray(frame_data, format="rgb24")
-        frame.pts = self._frame_index
-        frame.time_base = Fraction(1, max(target.fps, 1))
+        sent_at = time.perf_counter()
+        assert self._started_at is not None
+        frame.pts = int(max(sent_at - self._started_at, 0.0) * VIDEO_CLOCK_HZ)
+        frame.time_base = Fraction(1, VIDEO_CLOCK_HZ)
         self._frame_index += 1
-        self._last_frame_at = time.perf_counter()
+        self._last_frame_at = sent_at
         self._last_width = frame.width
         self._last_height = frame.height
         return frame
@@ -139,7 +151,17 @@ class SourceVideoTrack(VideoStreamTrack):
             return 0.0
         # 低分辨率差分足够判断画面活跃度，避免给每帧增加明显开销。
         changed = cv2.absdiff(sample, previous) > 15
+        self._motion_sample_count += 1
         return round(float(np.count_nonzero(changed)) / float(changed.size), 4)
+
+    def _effective_fps(self, target: QualityProfile) -> int:
+        if (
+            self._motion_sample_count > 0
+            and self._last_motion_ratio <= STATIC_MOTION_RATIO_THRESHOLD
+        ):
+            # 静态桌面无需持续满帧推送，先降低编码/带宽压力。
+            return min(target.fps, STATIC_EFFECTIVE_FPS)
+        return target.fps
 
     def _target_profile(self) -> QualityProfile:
         if self._quality_profile_provider is None:
