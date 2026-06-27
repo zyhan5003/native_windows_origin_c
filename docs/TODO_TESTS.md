@@ -1,7 +1,7 @@
 # 待集中验收
 
 1. 文件传输实机边界：超大文件、真实浏览器断连后的 `.part` 清理。
-2. AQE 热切：更高分辨率/真实 LAN 场景确认自动档位变化会影响实际 WebRTC 接收分辨率/FPS。
+2. AQE 热切：真实 LAN 场景确认自动档位变化会影响实际 WebRTC 接收分辨率/FPS；高于捕获源的分辨率只更新目标状态、不放大源。
 3. AQE 统计：Chrome 接收 stats 与 `/api/health.webrtc.sessions[].video` 的分辨率/FPS/运动比例长稳对齐。
 4. 系统性能：真实预览/硬编/长稳场景记录 `/api/health.system` 样本数/峰值与视频 `capture_ms/resize_ms/effective_fps`。
 5. 键盘控制：Chrome 验证字母数字、修饰键、功能键、方向键、小键盘和 PrintScreen/NumLock/ScrollLock。

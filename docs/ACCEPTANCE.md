@@ -59,3 +59,5 @@ python -m screen_windows bench-encode
 - 2026-06-27 Chrome MCP：Web UI 改为远控驾驶舱布局，健康检查收为摘要；手动自定义 `1600x900@45fps/7.5Mbps` 可生效，控制台无 error/warn/issue。
 - 2026-06-27 Chrome MCP：Web UI 增加停止/重建预览、填充/完整显示和全屏入口；页面加载无 error/warn/issue。
 - 2026-06-27 Chrome MCP：Web UI 改为新手三步连接导向，画质控件补充用途说明，诊断日志默认折叠；桌面/窄屏快照可读，控制台无 error/warn/issue。
+- 2026-06-27 Chrome MCP：交付冒烟通过；PIN 认证、WebRTC `connected`、Chrome video `1280x720`、剪贴板文本双向、文件上传/列表/下载、手动降采样 `1024x576@15fps/1.5Mbps` 均可用，控制台无消息，网络请求 200/204。
+- 2026-06-27 环境门禁：`info --json` 识别 WinGet FFmpeg 8.1.1，NVENC/AMF 探针失败后自动落到 QSV；`bench-encode 1280x720@24fps/24帧` 成功。
