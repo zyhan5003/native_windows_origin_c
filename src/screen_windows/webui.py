@@ -446,6 +446,7 @@ INDEX_HTML = """<!doctype html>
       let reconnectingSignal = false;
       let reconnectTimer = null;
       let reconnectAttempts = 0;
+      let autoReconnectPaused = false;
       let controlActive = false;
       let inputSequence = 0;
       let pendingInputEvents = [];
@@ -697,6 +698,11 @@ INDEX_HTML = """<!doctype html>
         }
       }
 
+      function clearStoredAuthToken() {
+        localStorage.removeItem('screen_windows_token');
+        authToken = '';
+      }
+
       function rejectPendingSignalReady(error) {
         if (rejectSignalReady) {
           rejectSignalReady(error);
@@ -773,13 +779,15 @@ INDEX_HTML = """<!doctype html>
       }
 
       function canAutoReconnect() {
+        if (autoReconnectPaused) {
+          return false;
+        }
         return authMode() === 'none' || (canReuseToken() && Boolean(authToken));
       }
 
       function storeAuthToken(token) {
         if (!canReuseToken()) {
-          localStorage.removeItem('screen_windows_token');
-          authToken = '';
+          clearStoredAuthToken();
           return;
         }
         authToken = token;
@@ -895,14 +903,26 @@ INDEX_HTML = """<!doctype html>
 
           if (payload.type === 'auth_error') {
             if (authToken && pinInput.value.trim()) {
-              localStorage.removeItem('screen_windows_token');
-              authToken = '';
+              clearStoredAuthToken();
               socket.send(JSON.stringify({
                 type: 'auth',
                 version: '0.1.0',
                 pin: pinInput.value.trim(),
               }));
               updateSessionStatus('令牌失效，回退到 PIN 配对...', true);
+              return;
+            }
+            if (authToken) {
+              // token 失效时停止自动重连风暴，让用户明确重新输入 PIN。
+              clearStoredAuthToken();
+              clearReconnectTimer();
+              autoReconnectPaused = true;
+              reconnectingSignal = false;
+              reconnectAttempts = 0;
+              streamBtn.disabled = true;
+              updateSessionStatus(`令牌失效，请重新输入 PIN: ${payload.reason}`);
+              rejectPendingSignalReady(new Error(`auth failed: ${payload.reason}`));
+              socket.close();
               return;
             }
             updateSessionStatus(`认证失败: ${payload.reason}`);
@@ -996,8 +1016,10 @@ INDEX_HTML = """<!doctype html>
 
         const timestamp = Math.floor(Date.now() / 1000);
         if (!canReuseToken() && authToken) {
-          localStorage.removeItem('screen_windows_token');
-          authToken = '';
+          clearStoredAuthToken();
+        }
+        if (pinInput.value.trim() || authMode() === 'none') {
+          autoReconnectPaused = false;
         }
         if (canReuseToken() && authToken) {
           const signature = await computeSignature(authToken, timestamp);
@@ -1570,8 +1592,8 @@ INDEX_HTML = """<!doctype html>
       });
 
       resetBtn.addEventListener('click', async () => {
-        localStorage.removeItem('screen_windows_token');
-        authToken = '';
+        clearStoredAuthToken();
+        autoReconnectPaused = true;
         updateControlState(false, '令牌已清除');
         updateSessionStatus('本地令牌已清除');
       });
