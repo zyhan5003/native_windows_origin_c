@@ -31,6 +31,22 @@ python -m pip install -e .[dev]
 python -m screen_windows launcher
 ```
 
+## Windows 打包
+
+先装打包工具：
+
+```powershell
+python -m pip install pyinstaller
+```
+
+生成可分发目录：
+
+```powershell
+pyinstaller --noconfirm screen_windows.spec
+```
+
+打包后可直接运行 `dist\screen_windows\screen_windows.exe`。如果要给别人发，优先发整个 `dist\screen_windows\` 目录，不建议只拷单个 exe。
+
 启动后会自动打开本地启动页：
 
 ```text
